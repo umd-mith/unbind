@@ -32,7 +32,7 @@ print m.jsonld()
 
 To run the tests you will need a copy of the Shelley-Godwin TEI data:
 
-    git clone git@github.com:umd-mith/sga.git sga
+    git clone https://github.com/umd-mith/sga.git
 
 then:
 
