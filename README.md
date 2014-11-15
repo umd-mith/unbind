@@ -1,6 +1,6 @@
 # unbind
 
-[![Build Status](https://travis-ci.org/umd-mith/sga.svg)](http://travis-ci.org/umd-mith/sga)
+[![Build Status](https://travis-ci.org/umd-mith/unbind.svg)](http://travis-ci.org/umd-mith/unbind)
 
 unbind is a Python utility for generating a Shared Canvas manifest from
 Shelley-Godwin TEI for use by the Shared Canvas viewer. It's also a work 
