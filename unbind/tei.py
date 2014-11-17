@@ -19,7 +19,13 @@ class Document(object):
 
     def __init__(self, tei_filename):
         tei = etree.parse(tei_filename).getroot()
-
+        self.title = "Frankenstein"
+        self.agent = "Mary Shelley"
+        self.attribution = "Bodleian Library, University of Oxford"
+        self.date = "18 April-[?13] May 1817"
+        self.service = "http://dev.shelleygodwinarchive.org/sc/oxford/frankenstein/notebook/c1"
+        self.state = "Fair copy"
+        self.label = "Fair-Copy Notebook C1"
         self.surfaces = []
         for inc in tei.findall('.//{%s}include' % XI):
             filename = urljoin(tei_filename, inc.attrib['href'])
@@ -42,8 +48,8 @@ class Surface(object):
 
         doc = surface.doc
         tei = doc.getroot()
-        self.height = tei.attrib.get('lry')
-        self.width = tei.attrib.get('lrx')
+        self.height = int(tei.attrib.get('lry'))
+        self.width = int(tei.attrib.get('lrx'))
         self.folio = tei.attrib.get("{%s}folio" % MITH)
         self.shelfmark = tei.attrib.get("{%s}shelfmark" % MITH)
         self.image = tei.find('.//{%s}graphic' % TEI).get('url')

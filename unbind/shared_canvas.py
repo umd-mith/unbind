@@ -8,7 +8,7 @@ from rdflib.plugin import register, Parser, Serializer
 from rdflib import ConjunctiveGraph, URIRef, RDF, RDFS, BNode, Literal
 
 from .tei import Document
-from .namespaces import OA, OAX, ORE, SC, SGA, TEI, EXIF
+from .namespaces import DC, OA, OAX, ORE, SC, SGA, TEI, EXIF
 
 
 class Manifest(object):
@@ -27,7 +27,13 @@ class Manifest(object):
 
     def _build(self):
         self.g.add((self.uri, RDF.type, SC.Manifest))
-        # TODO: add manifest level metadata here
+        self.g.add((self.uri, RDFS.label, Literal(self.tei.label)))
+        self.g.add((self.uri, DC.title, Literal(self.tei.title)))
+        self.g.add((self.uri, SC.agentLabel, Literal(self.tei.agent)))
+        self.g.add((self.uri, SC.attributionLabel, Literal(self.tei.agent)))
+        self.g.add((self.uri, SC.dateLabel, Literal(self.tei.date)))
+        self.g.add((self.uri, SGA.stateLabel, Literal(self.tei.state)))
+        self.g.add((self.uri, SC.service, URIRef(self.tei.service)))
         self._add_canvases()
 
     def _add_canvases(self):
@@ -201,7 +207,7 @@ class Manifest(object):
             "images" : {
               "@type" : "@id",
               "@id" : "sc:hasImageAnnotations",
-              "@container" : "@list"
+              #"@container" : "@list"
             },
             "otherContent" : {
               "@type" : "@id",
@@ -221,11 +227,9 @@ class Manifest(object):
             "description" : "dc:description",
             "attribution" : "sc:attributionLabel",
             "height" : {
-              "@type" : "xsd:int",
               "@id" : "exif:height"
             },
             "width" : {
-              "@type" : "xsd:int",
               "@id" : "exif:width"
             },
             "viewingDirection" : "sc:viewingDirection",
@@ -322,11 +326,9 @@ class Manifest(object):
               "@container" : "@list"
             },
             "beginOffset" : {
-              #"@type" : "xsd:int",
               "@id" : "oax:begin"
             },
             "endOffset" : {
-              #"@type" : "xsd:int",
               "@id" : "oax:end"
             },
             "textOffsetSelector" : {

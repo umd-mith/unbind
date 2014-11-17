@@ -21,8 +21,8 @@ def test_doc():
 def test_surface():
     tei_file = "sga/data/tei/ox/ox-ms_abinger_c58/ox-ms_abinger_c58-0001.xml"
     s = Surface(tei_file)
-    assert s.width == "5410"
-    assert s.height == "6660" 
+    assert s.width == 5410
+    assert s.height == 6660
     assert s.shelfmark == "MS. Abinger c. 58"
     assert s.folio == "1r"
     assert s.image == "http://shelleygodwinarchive.org/images/ox/ox-ms_abinger_c58-0001.jp2"
@@ -65,3 +65,4 @@ def test_jsonld():
     assert g.value(URIRef('http://example.com/frankenstein.json'), RDF.type) == URIRef('http://www.shared-canvas.org/ns/Manifest')
     line_anns = list(g.triples((None, RDF.type, SGA.LineAnnotation)))
     assert len(line_anns) == 638
+    

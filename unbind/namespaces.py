@@ -1,5 +1,6 @@
 from rdflib import Namespace
 
+DC   =  Namespace('http://purl.org/dc/elements/1.1/')
 MITH =  Namespace('http://mith.umd.edu/sc/ns1#')
 OA   =  Namespace('http://www.w3.org/ns/openannotation/core/')
 OAX  =  Namespace('http://www.w3.org/ns/openannotation/extension/')
