@@ -19,6 +19,7 @@ class Document(object):
 
     def __init__(self, tei_filename):
         tei = etree.parse(tei_filename).getroot()
+        # TODO: find the real ones
         self.title = "Frankenstein"
         self.agent = "Mary Shelley"
         self.attribution = "Bodleian Library, University of Oxford"
@@ -53,12 +54,14 @@ class Surface(object):
         self.folio = tei.attrib.get("{%s}folio" % MITH)
         self.shelfmark = tei.attrib.get("{%s}shelfmark" % MITH)
         self.image = tei.find('.//{%s}graphic' % TEI).get('url')
+        # TODO: find the real one
+        self.hand = "Mary Shelley"
         
         # use a SAX parser to get the line annotations
         # since we need to keep track of text offsets 
 
         parser = make_parser()
-        handler = SurfaceHandler()
+        handler = LineOffsetHandler()
         parser.setContentHandler(handler)
         parser.parse(tmp_filename)
         self.zones = handler.zones
@@ -66,7 +69,7 @@ class Surface(object):
     @property
     def uri(self):
         m = re.search('(/data/.+$)', self.filename)
-        return 'https://raw.githubusercontent.com/umd-mith/sga/master' + m.group(1)
+        return m.group(1)
 
 
 class Zone(object):
@@ -107,7 +110,7 @@ class Line(object):
         self.text = ""
 
 
-class SurfaceHandler(ContentHandler):
+class LineOffsetHandler(ContentHandler):
     """
     SAX Handler for extracting zones and lines from a TEI canvas.
     """

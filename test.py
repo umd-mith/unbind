@@ -55,6 +55,15 @@ def test_jsonld():
     m = Manifest(tei_file, manifest_uri)
     jsonld = m.jsonld()
 
+    # sanity check the json-ld
+    manifest = None
+    for r in jsonld['@graph']:
+        if '@type' in r and r['@type'] == 'sc:Manifest':
+            manifest = r
+    assert manifest
+    print json.dumps(manifest, indent=2)
+    assert 'images' in manifest
+
     # parse the json-ld as rdf
     register('json-ld', Parser, 'rdflib_jsonld.parser', 'JsonLDParser')
     g = ConjunctiveGraph()

@@ -58,12 +58,14 @@ class Manifest(object):
             g.add((canvas_uri, RDFS.label, Literal(surface.folio)))
             g.add((canvas_uri, SGA.folioLabel, Literal(surface.folio)))
             g.add((canvas_uri, SGA.shelfmarkLabel, Literal(surface.shelfmark)))
+            g.add((canvas_uri, SGA.handLabel, Literal(surface.hand)))
             g.add((canvas_uri, EXIF.height, Literal(surface.height)))
             g.add((canvas_uri, EXIF.width, Literal(surface.width)))
           
             # add the image annotation
             image_ann_uri = BNode()
             g.add((image_ann_uri, RDF.type, OA.Annotation))
+            g.add((image_ann_uri, RDF.type, SC.ContentAnnotation))
             g.add((image_ann_uri, OA.hasTarget, canvas_uri))
             g.add((image_ann_uri, OA.hasBody, URIRef(surface.image)))
             g.add((self.uri, SC.hasImageAnnotations, image_ann_uri))
