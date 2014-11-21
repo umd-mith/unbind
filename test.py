@@ -61,7 +61,6 @@ def test_jsonld():
         if '@type' in r and r['@type'] == 'sc:Manifest':
             manifest = r
     assert manifest
-    print json.dumps(manifest, indent=2)
     assert 'images' in manifest
 
     # parse the json-ld as rdf

@@ -19,7 +19,7 @@ class Document(object):
 
     def __init__(self, tei_filename):
         tei = etree.parse(tei_filename).getroot()
-        # TODO: find the real ones
+        # XXX: get these from the TEI document
         self.title = "Frankenstein"
         self.agent = "Mary Shelley"
         self.attribution = "Bodleian Library, University of Oxford"
@@ -54,7 +54,7 @@ class Surface(object):
         self.folio = tei.attrib.get("{%s}folio" % MITH)
         self.shelfmark = tei.attrib.get("{%s}shelfmark" % MITH)
         self.image = tei.find('.//{%s}graphic' % TEI).get('url')
-        # TODO: find the real one
+        # XXX: get this from the TEI document
         self.hand = "Mary Shelley"
         
         # use a SAX parser to get the line annotations

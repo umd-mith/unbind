@@ -20,9 +20,10 @@ class Manifest(object):
         self._build()
 
     def jsonld(self, indent=2):
-        j = self.g.serialize(format='json-ld')
+        j = self.g.serialize(format='json-ld', context=self._context())
         j = json.loads(j)
-        j = pyld.jsonld.frame(j, self._context())
+        j = pyld.jsonld.compact(j, self._context())
+        #j = pyld.jsonld.frame(j, self._context())
         return j
 
     def _build(self):
@@ -39,14 +40,11 @@ class Manifest(object):
     def _add_canvases(self):
         g = self.g
 
-        sequences_uri = BNode()
-        g.add((self.uri, SC.hasSequences, sequences_uri))
-
         sequence_uri = BNode()
-        g.add((sequences_uri, RDF.first, sequence_uri))
-        g.add((sequences_uri, RDF.rest, RDF.nil))
+        g.add((self.uri, SC.hasSequences, sequence_uri))
         g.add((sequence_uri, RDF.type, SC.Sequence))
         g.add((sequence_uri, RDF.type, RDF.List))
+        g.add((sequence_uri, RDF.rest, RDF.nil))
         g.add((sequence_uri, RDFS.label, Literal("Physical sequence")))
 
         for surface in self.tei.surfaces:
