@@ -10,7 +10,7 @@ unbind is a Python utility for generating a [Shared Canvas](http://iiif.io/model
 
 ## Command Line
 
-When you install you will get a command line program `tei2sc` which you 
+When you install you will get a command line program `unbind` which you 
 can pass the path to a TEI file and the URI you'd like to use for the 
 manifest, and it will print out a Shared Canvas document as JSON-LD:
 
