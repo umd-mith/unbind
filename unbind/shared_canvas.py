@@ -104,6 +104,8 @@ class Manifest(object):
             # add the line annotations
             self._add_text_annotations(surface)
 
+            break
+
         # close off the sequence list
         g.add((sequence_uri, RDF.rest, RDF.nil))
 
@@ -153,6 +155,16 @@ class Manifest(object):
                 g.add((self.line_annotations, ORE.aggregates, line_annotation))
                 g.add((line_annotation, RDF.type, SGA.LineAnnotation))
                 g.add((line_annotation, RDF.type, OAX.Highlight))
+
+                # add rendering styles
+                if line.rend:
+                    m = re.match('indent(\d+)', line.rend)
+                    if m:
+                        g.add((line_annotation, SGA.textIndentLevel,
+                            Literal(int(m.group(1)))))
+                    else:
+                        g.add((line_annotation, SGA.textAlignment, 
+                            Literal(line.rend)))
            
                 # link LineAnnotation to SpecificResource and TEI file
                 target = BNode()
