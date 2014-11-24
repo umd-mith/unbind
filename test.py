@@ -46,9 +46,6 @@ def test_rend():
     assert s.zones[0].lines[0].rend == 'indent3'
     assert s.zones[0].lines[1].rend == 'center'
 
-
-
-
 def test_deletion():
     # TODO: what should we do here?
     tei_file = "sga/data/tei/ox/ox-ms_abinger_c58/ox-ms_abinger_c58-0001.xml"
