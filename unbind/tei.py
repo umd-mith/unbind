@@ -1,5 +1,6 @@
 #!/usr/bin/env python
 
+import os
 import re
 import sys
 import teizone
@@ -67,8 +68,11 @@ class Surface(object):
         self.zones = handler.zones
 
     @property
-    def uri(self):
-        m = re.search('(/data/.+$)', self.filename)
+    def relative_path(self):
+        """
+        Returns the path to the XML file in the SGA Github repository.
+        """
+        m = re.search('(/data/.+)', os.path.abspath(self.filename))
         return m.group(1)
 
 
@@ -91,7 +95,7 @@ class Zone(object):
     @property
     def end(self):
         if len(self.lines) > 0:
-            return self.lines[0].end
+            return self.lines[-1].end
         else:
             return None
 
@@ -108,6 +112,7 @@ class Line(object):
         self.begin = 0
         self.end = 0
         self.text = ""
+        self.rend = None
 
 
 class LineOffsetHandler(ContentHandler):
@@ -128,6 +133,7 @@ class LineOffsetHandler(ContentHandler):
         elif name == "line":
             self.in_line = True
             l = Line()
+            l.rend = attrs.get('rend')
             l.begin = self.pos
             self.zones[-1].lines.append(l)
 

@@ -38,6 +38,17 @@ def test_surface():
     assert l.begin == 25
     assert l.end == 76
 
+def test_rend():
+    tei_file = "sga/data/tei/ox/ox-ms_abinger_c56/ox-ms_abinger_c56-0001.xml"
+    s = Surface(tei_file)
+    assert len(s.zones) == 1
+    assert len(s.zones[0].lines) == 14
+    assert s.zones[0].lines[0].rend == 'indent3'
+    assert s.zones[0].lines[1].rend == 'center'
+
+
+
+
 def test_deletion():
     # TODO: what should we do here?
     tei_file = "sga/data/tei/ox/ox-ms_abinger_c58/ox-ms_abinger_c58-0001.xml"
@@ -54,14 +65,26 @@ def test_jsonld():
     manifest_uri = 'http://example.com/frankenstein.json'
     m = Manifest(tei_file, manifest_uri)
     jsonld = m.jsonld()
+    open('test.jsonld', 'w').write(json.dumps(jsonld, indent=2))
 
-    # sanity check the json-ld
+    # find the manifest
     manifest = None
     for r in jsonld['@graph']:
         if '@type' in r and r['@type'] == 'sc:Manifest':
             manifest = r
     assert manifest
-    assert 'images' in manifest
+
+    # check for images
+    # assert 'images' in manifest
+
+    # get the sequence
+    assert 'sc:hasSequences' in manifest
+    seq = get(jsonld, manifest['sc:hasSequences']['@id'])
+
+    # first canvas
+    assert 'first' in seq
+    canvas = get(jsonld, seq['first'])
+    assert canvas['label'] == '1r'
 
     # parse the json-ld as rdf
     register('json-ld', Parser, 'rdflib_jsonld.parser', 'JsonLDParser')
@@ -69,8 +92,13 @@ def test_jsonld():
     jsonld_str = json.dumps(jsonld)
     g.parse(data=jsonld_str, format='json-ld')
 
-    # sanity check the graph
+    # quick sanity check the graph
     assert g.value(URIRef('http://example.com/frankenstein.json'), RDF.type) == URIRef('http://www.shared-canvas.org/ns/Manifest')
     line_anns = list(g.triples((None, RDF.type, SGA.LineAnnotation)))
     assert len(line_anns) == 638
-    
+
+def get(jsonld, id):
+    for o in jsonld['@graph']:
+        if o['@id'] == id:
+            return o
+    return None
