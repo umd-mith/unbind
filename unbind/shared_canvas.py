@@ -1,9 +1,11 @@
 #!/usr/bin/env python
 
+import re
 import sys
 import json
 import pyld
 
+from six.moves.urllib.parse import urljoin
 from rdflib.plugin import register, Parser, Serializer
 from rdflib import ConjunctiveGraph, URIRef, RDF, RDFS, BNode, Literal
 
@@ -14,17 +16,33 @@ from .namespaces import DC, OA, OAX, ORE, SC, SGA, TEI, EXIF
 class Manifest(object):
 
     def __init__(self, tei_filename, manifest_uri):
+        g = self.g = ConjunctiveGraph()
         self.tei = Document(tei_filename)
         self.uri = URIRef(manifest_uri)
-        self.g = ConjunctiveGraph()
+
+        la = self.line_annotations = BNode()
+        g.add((self.uri, ORE.aggregates, la))
+        g.add((la, RDF.type, SC.AnnotationList))
+        g.add((la, RDF.type, SC.Layer))
+        g.add((la, RDFS.label, Literal("Transcription")))
+        g.add((la, SC.forMotivation, SC.painting))
+
+        za = self.zone_annotations = BNode()
+        g.add((self.uri, ORE.aggregates, za))
+        g.add((za, RDF.type, SC.AnnotationList))
+        g.add((za, RDF.type, SC.Layer))
+        g.add((za, RDFS.label, Literal("Zones")))
+
         self._build()
 
     def jsonld(self, indent=2):
-        j = self.g.serialize(format='json-ld', context=self._context())
+        j = self.g.serialize(format='json-ld')
         j = json.loads(j)
         j = pyld.jsonld.compact(j, self._context())
-        #j = pyld.jsonld.frame(j, self._context())
         return j
+
+    def tei_url(self, surface):
+        return urljoin(self.uri, surface.relative_path)
 
     def _build(self):
         self.g.add((self.uri, RDF.type, SC.Manifest))
@@ -59,11 +77,17 @@ class Manifest(object):
             g.add((canvas_uri, SGA.handLabel, Literal(surface.hand)))
             g.add((canvas_uri, EXIF.height, Literal(surface.height)))
             g.add((canvas_uri, EXIF.width, Literal(surface.width)))
+
+            # add the image
+            image_uri = URIRef(surface.image)
+            g.add((image_uri, DC['format'], Literal('image/jp2')))
+            g.add((image_uri, EXIF.height, Literal(surface.height)))
+            g.add((image_uri, EXIF.width, Literal(surface.width)))
+            g.add((image_uri, SC.hasRelatedService, URIRef("http://tiles2.bodleian.ox.ac.uk:8080/adore-djatoka/resolver")))
           
             # add the image annotation
             image_ann_uri = BNode()
             g.add((image_ann_uri, RDF.type, OA.Annotation))
-            g.add((image_ann_uri, RDF.type, SC.ContentAnnotation))
             g.add((image_ann_uri, OA.hasTarget, canvas_uri))
             g.add((image_ann_uri, OA.hasBody, URIRef(surface.image)))
             g.add((self.uri, SC.hasImageAnnotations, image_ann_uri))
@@ -85,27 +109,27 @@ class Manifest(object):
 
     def _add_zone_annotations(self, surface, canvas):
         g = self.g
-        annotations = BNode()
-
-        g.add((self.uri, ORE.aggregates, annotations))
-        g.add((annotations, RDF.type, SC.AnnotationList))
-        g.add((annotations, RDF.type, SC.Layer))
 
         for zone in surface.zones:
+
             annotation = BNode()
-            g.add((annotations, ORE.aggregates, annotation))
+            g.add((self.zone_annotations, ORE.aggregates, annotation))
+            g.add((annotation, RDF.type, OA.Annotation))
             g.add((annotation, RDF.type, SC.ContentAnnotation))
 
             body = BNode()
             g.add((annotation, OA.hasBody, body))
             g.add((body, RDF.type, OA.SpecificResource))
-            g.add((body, OA.hasSource, URIRef(surface.uri)))
+
+            # construct a URL for the tei xml file assuming that the 
+            # sga data is mounted next to the manifest
+            g.add((body, OA.hasSource, URIRef(self.tei_url(surface))))
 
             selector = BNode()
             g.add((body, OA.hasSelector, selector))
             g.add((selector, RDF.type, OAX.TextOffsetSelector))
-            g.add((selector, OAX.beginOffset, Literal(zone.begin)))
-            g.add((selector, OAX.endOffset, Literal(zone.end)))
+            g.add((selector, OAX.begin, Literal(zone.begin)))
+            g.add((selector, OAX.end, Literal(zone.end)))
 
             target = BNode()
             g.add((annotation, OA.hasTarget, target))
@@ -119,11 +143,6 @@ class Manifest(object):
 
     def _add_text_annotations(self, surface):
         g = self.g
-        annotations = BNode()
-
-        g.add((self.uri, ORE.aggregates, annotations))
-        g.add((annotations, RDF.type, SC.AnnotationList))
-        g.add((annotations, RDF.type, SC.Layer))
 
         for zone in surface.zones:
 
@@ -131,14 +150,15 @@ class Manifest(object):
 
                 # link AnnotationList to LineAnnotation
                 line_annotation = BNode()
-                g.add((annotations, ORE.aggregates, line_annotation))
+                g.add((self.line_annotations, ORE.aggregates, line_annotation))
                 g.add((line_annotation, RDF.type, SGA.LineAnnotation))
+                g.add((line_annotation, RDF.type, OAX.Highlight))
            
                 # link LineAnnotation to SpecificResource and TEI file
                 target = BNode()
                 g.add((line_annotation, OA.hasTarget, target))
                 g.add((target, RDF.type, OA.SpecificResource))
-                g.add((target, OA.hasSource, URIRef(surface.uri)))
+                g.add((target, OA.hasSource, URIRef(self.tei_url(surface))))
 
                 # link SpecificResource and TextOffsetSelector
                 selector = BNode()
@@ -152,207 +172,205 @@ class Manifest(object):
       # TODO: pare this down, and make it more sane over time
       # We should only be asserting things that are needed by the viewer
       return {
-          "@context": {
-            "sc" : "http://www.shared-canvas.org/ns/",
-            "sga" : "http://www.shelleygodwinarchive.org/ns1#",
-            "ore" : "http://www.openarchives.org/ore/terms/",
-            "exif" : "http://www.w3.org/2003/12/exif/ns#",
-            "iiif" : "http://library.stanford.edu/iiif/image-api/ns/",
-            "oa" : "http://www.w3.org/ns/openannotation/core/",
-            "oax" : "http://www.w3.org/ns/openannotation/extension/",
-            "cnt" : "http://www.w3.org/2011/content#",
-            "dc" : "http://purl.org/dc/elements/1.1/",
-            "dcterms" : "http://purl.org/dc/terms/",
-            "dctypes" : "http://purl.org/dc/dcmitype/",
-            "foaf" : "http://xmlns.com/foaf/0.1/",
-            "rdf" : "http://www.w3.org/1999/02/22-rdf-syntax-ns#",
-            "rdfs" : "http://www.w3.org/2000/01/rdf-schema#",
-            "skos" : "http://www.w3.org/2004/02/skos/core#",
-            "xsd" : "http://www.w3.org/2001/XMLSchema#",
-            "license" : {
-              "@type" : "@id",
-              "@id" : "dcterms:license"
-            },
-            "service" : {
-              "@type" : "@id",
-              "@id" : "sc:hasRelatedService"
-            },
-            "seeAlso" : {
-              "@type" : "@id",
-              "@id" : "sc:hasRelatedDescription"
-            },
-            "within" : {
-              "@type" : "@id",
-              "@id" : "dcterms:isPartOf"
-            },
-            "profile" : {
-              "@type" : "@id",
-              "@id" : "dcterms:conformsTo"
-            },
-            "sequences" : {
-              "@type" : "@id",
-              "@id" : "sc:hasSequences",
-              "@container" : "@list"
-            },
-            "canvases" : {
-              "@type" : "@id",
-              "@id" : "sc:hasCanvases",
-              "@container" : "@list"
-            },
-            "resources" : {
-              "@type" : "@id",
-              "@id" : "sc:hasAnnotations",
-              "@container" : "@list"
-            },
-            "images" : {
-              "@type" : "@id",
-              "@id" : "sc:hasImageAnnotations",
-              #"@container" : "@list"
-            },
-            "otherContent" : {
-              "@type" : "@id",
-              "@id" : "sc:hasLists",
-              "@container" : "@list"
-            },
-            "structures" : {
-              "@type" : "@id",
-              "@id" : "sc:hasRanges",
-              "@container" : "@list"
-            },
-            "metadata" : {
-              "@type" : "@id",
-              "@id" : "sc:metadataLabels",
-              "@container" : "@list"
-            },
-            "description" : "dc:description",
-            "attribution" : "sc:attributionLabel",
-            "height" : {
-              "@id" : "exif:height"
-            },
-            "width" : {
-              "@id" : "exif:width"
-            },
-            "viewingDirection" : "sc:viewingDirection",
-            "viewingHint" : "sc:viewingHint",
-            "tile_height" : {
-              "@type" : "xsd:integer",
-              "@id" : "iiif:tileHeight"
-            },
-            "tile_width" : {
-              "@type" : "xsd:integer",
-              "@id" : "iiif:tileWidth"
-            },
-            "scale_factors" : {
-              "@id" : "iiif:scaleFactor",
-              "@container" : "@list"
-            },
-            "formats" : {
-              "@id" : "iiif:formats",
-              "@container" : "@list"
-            },
-            "qualities" : {
-              "@id" : "iiif:qualities",
-              "@container" : "@list"
-            },
-            "motivation" : {
-              "@type" : "@id",
-              "@id" : "oa:motivatedBy"
-            },
-            "resource" : {
-              "@type" : "@id",
-              "@id" : "oa:hasBody"
-            },
-            "on" : {
-              "@type" : "@id",
-              "@id" : "oa:hasTarget"
-            },
-            "full" : {
-              "@type" : "@id",
-              "@id" : "oa:hasSource"
-            },
-            "selector" : {
-              "@type" : "@id",
-              "@id" : "oa:hasSelector"
-            },
-            "stylesheet" : {
-              "@type" : "@id",
-              "@id" : "oa:styledBy"
-            },
-            "style" : "oa:styleClass",
-            "painting" : "sc:painting",
-            "hasState" : {
-              "@type" : "@id",
-              "@id" : "oa:hasState"
-            },
-            "hasScope" : {
-              "@type" : "@id",
-              "@id" : "oa:hasScope"
-            },
-            "annotatedBy" : {
-              "@type" : "@id",
-              "@id" : "oa:annotatedBy"
-            },
-            "serializedBy" : {
-              "@type" : "@id",
-              "@id" : "oa:serializedBy"
-            },
-            "equivalentTo" : {
-              "@type" : "@id",
-              "@id" : "oa:equivalentTo"
-            },
-            "cachedSource" : {
-              "@type" : "@id",
-              "@id" : "oa:cachedSource"
-            },
-            "conformsTo" : {
-              "@type" : "@id",
-              "@id" : "dcterms:conformsTo"
-            },
-            "default" : {
-              "@type" : "@id",
-              "@id" : "oa:default"
-            },
-            "item" : {
-              "@type" : "@id",
-              "@id" : "oa:item"
-            },
-            "first" : {
-              "@type" : "@id",
-              "@id" : "rdf:first"
-            },
-            "rest" : {
-              "@type" : "@id",
-              "@id" : "rdf:rest",
-              "@container" : "@list"
-            },
-            "beginOffset" : {
-              "@id" : "oax:begin"
-            },
-            "endOffset" : {
-              "@id" : "oax:end"
-            },
-            "textOffsetSelector" : {
-              "@type" : "@id",
-              "@id" : "oax:TextOffsetSelector"
-            },
-            "chars" : "cnt:chars",
-            "encoding" : "cnt:characterEncoding",
-            "bytes" : "cnt:bytes",
-            "format" : "dc:format",
-            "language" : "dc:language",
-            "annotatedAt" : "oa:annotatedAt",
-            "serializedAt" : "oa:serializedAt",
-            "when" : "oa:when",
-            "value" : "rdf:value",
-            "start" : "oa:start",
-            "end" : "oa:end",
-            "exact" : "oa:exact",
-            "prefix" : "oa:prefix",
-            "suffix" : "oa:suffix",
-            "label" : "rdfs:label",
-            "name" : "foaf:name",
-            "mbox" : "foaf:mbox"
-          }
+        "sc" : "http://www.shared-canvas.org/ns/",
+        "sga" : "http://www.shelleygodwinarchive.org/ns1#",
+        "ore" : "http://www.openarchives.org/ore/terms/",
+        "exif" : "http://www.w3.org/2003/12/exif/ns#",
+        "iiif" : "http://library.stanford.edu/iiif/image-api/ns/",
+        "oa" : "http://www.w3.org/ns/openannotation/core/",
+        "oax" : "http://www.w3.org/ns/openannotation/extension/",
+        "cnt" : "http://www.w3.org/2011/content#",
+        "dc" : "http://purl.org/dc/elements/1.1/",
+        "dcterms" : "http://purl.org/dc/terms/",
+        "dctypes" : "http://purl.org/dc/dcmitype/",
+        "foaf" : "http://xmlns.com/foaf/0.1/",
+        "rdf" : "http://www.w3.org/1999/02/22-rdf-syntax-ns#",
+        "rdfs" : "http://www.w3.org/2000/01/rdf-schema#",
+        "skos" : "http://www.w3.org/2004/02/skos/core#",
+        "xsd" : "http://www.w3.org/2001/XMLSchema#",
+        "license" : {
+          "@type" : "@id",
+          "@id" : "dcterms:license"
+        },
+        "service" : {
+          "@type" : "@id",
+          "@id" : "sc:hasRelatedService"
+        },
+        "seeAlso" : {
+          "@type" : "@id",
+          "@id" : "sc:hasRelatedDescription"
+        },
+        "within" : {
+          "@type" : "@id",
+          "@id" : "dcterms:isPartOf"
+        },
+        "profile" : {
+          "@type" : "@id",
+          "@id" : "dcterms:conformsTo"
+        },
+        "sequences" : {
+          "@type" : "@id",
+          "@id" : "sc:hasSequences",
+          "@container" : "@list"
+        },
+        "canvases" : {
+          "@type" : "@id",
+          "@id" : "sc:hasCanvases",
+          "@container" : "@list"
+        },
+        "resources" : {
+          "@type" : "@id",
+          "@id" : "sc:hasAnnotations",
+          "@container" : "@list"
+        },
+        "images" : {
+          "@type" : "@id",
+          "@id" : "sc:hasImageAnnotations",
+          "@container" : "@list"
+        },
+        "otherContent" : {
+          "@type" : "@id",
+          "@id" : "sc:hasLists",
+          "@container" : "@list"
+        },
+        "structures" : {
+          "@type" : "@id",
+          "@id" : "sc:hasRanges",
+          "@container" : "@list"
+        },
+        "metadata" : {
+          "@type" : "@id",
+          "@id" : "sc:metadataLabels",
+          "@container" : "@list"
+        },
+        "description" : "dc:description",
+        "attribution" : "sc:attributionLabel",
+        "height" : {
+          "@id" : "exif:height"
+        },
+        "width" : {
+          "@id" : "exif:width"
+        },
+        "viewingDirection" : "sc:viewingDirection",
+        "viewingHint" : "sc:viewingHint",
+        "tile_height" : {
+          "@type" : "xsd:integer",
+          "@id" : "iiif:tileHeight"
+        },
+        "tile_width" : {
+          "@type" : "xsd:integer",
+          "@id" : "iiif:tileWidth"
+        },
+        "scale_factors" : {
+          "@id" : "iiif:scaleFactor",
+          "@container" : "@list"
+        },
+        "formats" : {
+          "@id" : "iiif:formats",
+          "@container" : "@list"
+        },
+        "qualities" : {
+          "@id" : "iiif:qualities",
+          "@container" : "@list"
+        },
+        "motivation" : {
+          "@type" : "@id",
+          "@id" : "oa:motivatedBy"
+        },
+        "resource" : {
+          "@type" : "@id",
+          "@id" : "oa:hasBody"
+        },
+        "on" : {
+          "@type" : "@id",
+          "@id" : "oa:hasTarget"
+        },
+        "full" : {
+          "@type" : "@id",
+          "@id" : "oa:hasSource"
+        },
+        "selector" : {
+          "@type" : "@id",
+          "@id" : "oa:hasSelector"
+        },
+        "stylesheet" : {
+          "@type" : "@id",
+          "@id" : "oa:styledBy"
+        },
+        "style" : "oa:styleClass",
+        "painting" : "sc:painting",
+        "hasState" : {
+          "@type" : "@id",
+          "@id" : "oa:hasState"
+        },
+        "hasScope" : {
+          "@type" : "@id",
+          "@id" : "oa:hasScope"
+        },
+        "annotatedBy" : {
+          "@type" : "@id",
+          "@id" : "oa:annotatedBy"
+        },
+        "serializedBy" : {
+          "@type" : "@id",
+          "@id" : "oa:serializedBy"
+        },
+        "equivalentTo" : {
+          "@type" : "@id",
+          "@id" : "oa:equivalentTo"
+        },
+        "cachedSource" : {
+          "@type" : "@id",
+          "@id" : "oa:cachedSource"
+        },
+        "conformsTo" : {
+          "@type" : "@id",
+          "@id" : "dcterms:conformsTo"
+        },
+        "default" : {
+          "@type" : "@id",
+          "@id" : "oa:default"
+        },
+        "item" : {
+          "@type" : "@id",
+          "@id" : "oa:item"
+        },
+        "first" : {
+          "@type" : "@id",
+          "@id" : "rdf:first"
+        },
+        "rest" : {
+          "@type" : "@id",
+          "@id" : "rdf:rest",
+          "@container" : "@list"
+        },
+        "beginOffset" : {
+          "@id" : "oax:begin"
+        },
+        "endOffset" : {
+          "@id" : "oax:end"
+        },
+        "textOffsetSelector" : {
+          "@type" : "@id",
+          "@id" : "oax:TextOffsetSelector"
+        },
+        "chars" : "cnt:chars",
+        "encoding" : "cnt:characterEncoding",
+        "bytes" : "cnt:bytes",
+        "format" : "dc:format",
+        "language" : "dc:language",
+        "annotatedAt" : "oa:annotatedAt",
+        "serializedAt" : "oa:serializedAt",
+        "when" : "oa:when",
+        "value" : "rdf:value",
+        "start" : "oa:start",
+        "end" : "oa:end",
+        "exact" : "oa:exact",
+        "prefix" : "oa:prefix",
+        "suffix" : "oa:suffix",
+        "label" : "rdfs:label",
+        "name" : "foaf:name",
+        "mbox" : "foaf:mbox"
       }
 
 register('json-ld', Serializer, 'rdflib_jsonld.serializer', 'JsonLDSerializer')
