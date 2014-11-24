@@ -47,10 +47,15 @@ def test_rend():
     assert s.zones[0].lines[1].rend == 'center'
 
 def test_deletion():
-    # TODO: what should we do here?
     tei_file = "sga/data/tei/ox/ox-ms_abinger_c58/ox-ms_abinger_c58-0001.xml"
     s = Surface(tei_file)
-    l = s.zones[2].lines[13]
+    l = s.zones[2].lines[7]
+    assert len(l.deletes) == 1
+    d = l.deletes[0]
+    assert d.rend == 'strikethrough'
+    assert d.begin == 394 
+    assert d.end == 398
+    assert d.text == 'happ'
 
 def test_addition():
     # TODO: what should we do here?

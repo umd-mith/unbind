@@ -113,7 +113,22 @@ class Line(object):
         self.end = 0
         self.text = ""
         self.rend = None
+        self.adds = []
+        self.deletes = []
 
+class Add(object):
+    def __init__(self):
+        self.begin = 0
+        self.end = 0
+        self.text = ""
+        self.rend = None
+
+class Delete(object):
+    def __init__(self):
+        self.begin = 0
+        self.end = 0
+        self.text = ""
+        self.rend = None
 
 class LineOffsetHandler(ContentHandler):
     """
@@ -126,6 +141,8 @@ class LineOffsetHandler(ContentHandler):
         self.height = None
         self.width = None
         self.in_line = False
+        self.in_add = False
+        self.in_del = False
 
     def startElement(self, name, attrs):
         if name == "zone":
@@ -136,15 +153,37 @@ class LineOffsetHandler(ContentHandler):
             l.rend = attrs.get('rend')
             l.begin = self.pos
             self.zones[-1].lines.append(l)
+        elif name == "add":
+            self.in_add = True
+            l = self.zones[-1].lines[-1]
+            a = Add()
+            a.begin = self.pos
+            a.rend = attrs.get('rend')
+            l.adds.append(a)
+        elif name == "del":
+            self.in_del = True
+            l = self.zones[-1].lines[-1]
+            d = Delete()
+            d.begin = self.pos
+            d.rend = attrs.get('rend')
+            l.deletes.append(d)
 
     def endElement(self, name):
         if name == "line":
             self.zones[-1].lines[-1].end = self.pos
             self.in_line = False
+        elif name == "add":
+            self.zones[-1].lines[-1].adds[-1].end = self.pos
+            self.in_add = False
+        elif name == "del":
+            self.zones[-1].lines[-1].deletes[-1].end = self.pos
+            self.in_del = False
    
     def characters(self, content):
         self.pos += len(content) # TODO: unicode characters?
         if self.in_line:
             self.zones[-1].lines[-1].text += content
-
-
+        if self.in_del:
+            self.zones[-1].lines[-1].deletes[-1].text += content
+        if self.in_add:
+            self.zones[-1].lines[-1].adds[-1].text += content

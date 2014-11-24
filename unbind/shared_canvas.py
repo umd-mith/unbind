@@ -104,8 +104,6 @@ class Manifest(object):
             # add the line annotations
             self._add_text_annotations(surface)
 
-            break
-
         # close off the sequence list
         g.add((sequence_uri, RDF.rest, RDF.nil))
 
