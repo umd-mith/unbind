@@ -34,7 +34,6 @@ def test_surface():
     assert len(z.lines) == 15
 
     l = z.lines[0]
-    assert l.text == 'satisfied that nothing on earth will have the power'
     assert l.begin == 25
     assert l.end == 76
 
@@ -49,17 +48,24 @@ def test_rend():
 def test_deletion():
     tei_file = "sga/data/tei/ox/ox-ms_abinger_c58/ox-ms_abinger_c58-0001.xml"
     s = Surface(tei_file)
-    l = s.zones[2].lines[7]
-    assert len(l.deletes) == 1
-    d = l.deletes[0]
+    z = s.zones[2]
+    assert len(z.deletes) == 3
+    d = z.deletes[0]
     assert d.rend == 'strikethrough'
     assert d.begin == 394 
     assert d.end == 398
-    assert d.text == 'happ'
 
-def test_addition():
-    # TODO: what should we do here?
-    pass
+def test_highlight():
+    tei_file = "sga/data/tei/ox/ox-ms_abinger_c58/ox-ms_abinger_c58-0001.xml"
+    s = Surface(tei_file)
+    l = s.zones[2]
+    assert len(l.highlights) == 9
+
+def test_add():
+    tei_file = "sga/data/tei/ox/ox-ms_abinger_c58/ox-ms_abinger_c58-0061.xml"
+    s = Surface(tei_file)
+    z = s.zones[2]
+    assert len(z.adds) == 3
 
 def test_jsonld():
     # generate shared canvase json-ld

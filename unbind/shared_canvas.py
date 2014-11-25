@@ -146,6 +146,7 @@ class Manifest(object):
 
         for zone in surface.zones:
 
+            # TODO: process adds, deletes and highlights too
             for line in zone.lines:
 
                 # link AnnotationList to LineAnnotation

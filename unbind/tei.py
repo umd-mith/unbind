@@ -41,7 +41,8 @@ class Surface(object):
         self.filename = filename
 
         # TODO: at some point we should write the canonical coordinates to the 
-        # TEI. For now it is being done dynamically
+        # TEI. For now it is being done dynamically with zoner, saved to a 
+        # temporary file, which we then parse with a SAX Parser,
 
         surface = teizone.Surface(filename)
         surface.guess_coordinates()
@@ -79,25 +80,16 @@ class Surface(object):
 class Zone(object):
 
     def __init__(self, attrs):
-        self.lines = []
         self.ulx = attrs.get('ulx', 0)
         self.uly = attrs.get('uly', 0)
         self.lrx = attrs.get('lrx', 0)
         self.lry = attrs.get('lry', 0)
-
-    @property
-    def begin(self):
-        if len(self.lines) > 0:
-            return self.lines[0].begin
-        else:
-            return None
-
-    @property
-    def end(self):
-        if len(self.lines) > 0:
-            return self.lines[-1].end
-        else:
-            return None
+        self.begin = 0
+        self.end = 0
+        self.lines = []
+        self.adds = []
+        self.deletes = []
+        self.highlights = []
 
     @property
     def xywh(self):
@@ -113,8 +105,6 @@ class Line(object):
         self.end = 0
         self.text = ""
         self.rend = None
-        self.adds = []
-        self.deletes = []
 
 class Add(object):
     def __init__(self):
@@ -130,9 +120,19 @@ class Delete(object):
         self.text = ""
         self.rend = None
 
+class Highlight(object):
+    def __init__(self):
+        self.begin = 0
+        self.end = 0
+        self.text = ""
+        self.rend = None
+
 class LineOffsetHandler(ContentHandler):
     """
-    SAX Handler for extracting zones and lines from a TEI canvas.
+    SAX Handler for extracting zones, lines, adds, deletes,
+    and highlights from a TEI canvas. Each canvas is a 
+    collection of zones. The lines, adds, deletes and highlights
+    are added to the zone that they are a part of.
     """
 
     def __init__(self):
@@ -140,50 +140,43 @@ class LineOffsetHandler(ContentHandler):
         self.pos = 0
         self.height = None
         self.width = None
-        self.in_line = False
-        self.in_add = False
-        self.in_del = False
+        self.stack = []
 
     def startElement(self, name, attrs):
         if name == "zone":
-            self.zones.append(Zone(attrs))
+            z = Zone(attrs)
+            z.begin = self.pos
+            self.zones.append(z)
+            self.stack.append(z)
         elif name == "line":
-            self.in_line = True
             l = Line()
-            l.rend = attrs.get('rend')
             l.begin = self.pos
+            l.rend = attrs.get('rend')
             self.zones[-1].lines.append(l)
+            self.stack.append(l)
         elif name == "add":
-            self.in_add = True
-            l = self.zones[-1].lines[-1]
             a = Add()
             a.begin = self.pos
             a.rend = attrs.get('rend')
-            l.adds.append(a)
+            self.zones[-1].adds.append(a)
+            self.stack.append(a)
         elif name == "del":
-            self.in_del = True
-            l = self.zones[-1].lines[-1]
             d = Delete()
             d.begin = self.pos
             d.rend = attrs.get('rend')
-            l.deletes.append(d)
+            self.zones[-1].deletes.append(d)
+            self.stack.append(d)
+        elif name == "hi":
+            h = Highlight()
+            h.begin = self.pos
+            h.rend = attrs.get('rend')
+            self.zones[-1].highlights.append(h)
+            self.stack.append(h)
 
     def endElement(self, name):
-        if name == "line":
-            self.zones[-1].lines[-1].end = self.pos
-            self.in_line = False
-        elif name == "add":
-            self.zones[-1].lines[-1].adds[-1].end = self.pos
-            self.in_add = False
-        elif name == "del":
-            self.zones[-1].lines[-1].deletes[-1].end = self.pos
-            self.in_del = False
+        if name in ("zone", "line", "add", "del", "hi"):
+            e = self.stack.pop()
+            e.end = self.pos
    
     def characters(self, content):
-        self.pos += len(content) # TODO: unicode characters?
-        if self.in_line:
-            self.zones[-1].lines[-1].text += content
-        if self.in_del:
-            self.zones[-1].lines[-1].deletes[-1].text += content
-        if self.in_add:
-            self.zones[-1].lines[-1].adds[-1].text += content
+        self.pos += len(content) # TODO: does unicode matter here?
