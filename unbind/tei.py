@@ -112,6 +112,7 @@ class Add(object):
         self.end = 0
         self.text = ""
         self.rend = None
+        self.place = None
 
 class Delete(object):
     def __init__(self):
@@ -158,6 +159,7 @@ class LineOffsetHandler(ContentHandler):
             a = Add()
             a.begin = self.pos
             a.rend = attrs.get('rend')
+            a.place = attrs.get('place')
             self.zones[-1].adds.append(a)
             self.stack.append(a)
         elif name == "del":

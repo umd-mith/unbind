@@ -2,6 +2,7 @@
 
 import re
 import sys
+import tei
 import json
 import pyld
 
@@ -9,7 +10,6 @@ from six.moves.urllib.parse import urljoin
 from rdflib.plugin import register, Parser, Serializer
 from rdflib import ConjunctiveGraph, URIRef, RDF, RDFS, BNode, Literal
 
-from .tei import Document
 from .namespaces import DC, OA, OAX, ORE, SC, SGA, TEI, EXIF
 
 
@@ -17,10 +17,10 @@ class Manifest(object):
 
     def __init__(self, tei_filename, manifest_uri):
         g = self.g = ConjunctiveGraph()
-        self.tei = Document(tei_filename)
+        self.tei = tei.Document(tei_filename)
         self.uri = URIRef(manifest_uri)
 
-        la = self.line_annotations = BNode()
+        la = self.text_annotations = BNode()
         g.add((self.uri, ORE.aggregates, la))
         g.add((la, RDF.type, SC.AnnotationList))
         g.add((la, RDF.type, SC.Layer))
@@ -36,7 +36,7 @@ class Manifest(object):
         self._build()
 
     def jsonld(self, indent=2):
-        j = self.g.serialize(format='json-ld')
+        j = self.g.serialize(format='json-ld', context=self._context())
         j = json.loads(j)
         j = pyld.jsonld.compact(j, self._context())
         return j
@@ -145,39 +145,50 @@ class Manifest(object):
         g = self.g
 
         for zone in surface.zones:
-
             # TODO: process adds, deletes and highlights too
             for line in zone.lines:
+                self._add_text_annotation(line, surface)
+            for add in zone.adds:
+                self._add_text_annotation(add, surface)
+            for delete in zone.deletes:
+                self._add_text_annotation(delete, surface)
 
-                # link AnnotationList to LineAnnotation
-                line_annotation = BNode()
-                g.add((self.line_annotations, ORE.aggregates, line_annotation))
-                g.add((line_annotation, RDF.type, SGA.LineAnnotation))
-                g.add((line_annotation, RDF.type, OAX.Highlight))
+    def _add_text_annotation(self, a, surface):
+        g = self.g
+        if type(a) == tei.Line:
+            ann_type = SGA.LineAnnotation
+        elif type(a) == tei.Delete:
+            ann_type = SGA.DeleteAnnotation
+        elif type(a) == tei.Add:
+            ann_type = SGA.AdditionAnnotation
 
-                # add rendering styles
-                if line.rend:
-                    m = re.match('indent(\d+)', line.rend)
-                    if m:
-                        g.add((line_annotation, SGA.textIndentLevel,
-                            Literal(int(m.group(1)))))
-                    else:
-                        g.add((line_annotation, SGA.textAlignment, 
-                            Literal(line.rend)))
-           
-                # link LineAnnotation to SpecificResource and TEI file
-                target = BNode()
-                g.add((line_annotation, OA.hasTarget, target))
-                g.add((target, RDF.type, OA.SpecificResource))
-                g.add((target, OA.hasSource, URIRef(self.tei_url(surface))))
+        # link AnnotationList to Annotation
+        annotation = BNode()
+        g.add((self.text_annotations, ORE.aggregates, annotation))
+        g.add((annotation, RDF.type, ann_type))
+        g.add((annotation, RDF.type, OAX.Highlight))
 
-                # link SpecificResource and TextOffsetSelector
-                selector = BNode()
-                g.add((target, OA.hasSelector, selector))
-                g.add((selector, RDF.type, OAX.TextOffsetSelector))
-                g.add((selector, OAX.begin, Literal(line.begin)))
-                g.add((selector, OAX.end, Literal(line.end)))
+        # add rendering styles
+        if a.rend:
+            m = re.match('indent(\d+)', a.rend)
+            if m:
+                indent = m.group(1)
+                g.add((annotation, SGA.textIndentLevel, Literal(indent)))
+            else:
+                g.add((annotation, SGA.textAlignment, Literal(a.rend)))
+   
+        # link LineAnnotation to SpecificResource and TEI file
+        target = BNode()
+        g.add((annotation, OA.hasTarget, target))
+        g.add((target, RDF.type, OA.SpecificResource))
+        g.add((target, OA.hasSource, URIRef(self.tei_url(surface))))
 
+        # link SpecificResource and TextOffsetSelector
+        selector = BNode()
+        g.add((target, OA.hasSelector, selector))
+        g.add((selector, RDF.type, OAX.TextOffsetSelector))
+        g.add((selector, OAX.begin, Literal(a.begin)))
+        g.add((selector, OAX.end, Literal(a.end)))
 
     def _context(self):
       # TODO: pare this down, and make it more sane over time
@@ -385,5 +396,3 @@ class Manifest(object):
       }
 
 register('json-ld', Serializer, 'rdflib_jsonld.serializer', 'JsonLDSerializer')
-
-
