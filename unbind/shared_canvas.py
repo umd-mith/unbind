@@ -10,7 +10,7 @@ from six.moves.urllib.parse import urljoin
 from rdflib.plugin import register, Parser, Serializer
 from rdflib import ConjunctiveGraph, URIRef, RDF, RDFS, BNode, Literal
 
-from .namespaces import DC, OA, OAX, ORE, SC, SGA, TEI, EXIF
+from .namespaces import DC, OA, OAX, ORE, SC, SGA, TEI, EXIF, CNT
 
 
 class Manifest(object):
@@ -20,12 +20,12 @@ class Manifest(object):
         self.tei = tei.Document(tei_filename)
         self.uri = URIRef(manifest_uri)
 
-        la = self.text_annotations = BNode()
-        g.add((self.uri, ORE.aggregates, la))
-        g.add((la, RDF.type, SC.AnnotationList))
-        g.add((la, RDF.type, SC.Layer))
-        g.add((la, RDFS.label, Literal("Transcription")))
-        g.add((la, SC.forMotivation, SC.painting))
+        ta = self.text_annotations = BNode()
+        g.add((self.uri, ORE.aggregates, ta))
+        g.add((ta, RDF.type, SC.AnnotationList))
+        g.add((ta, RDF.type, SC.Layer))
+        g.add((ta, RDFS.label, Literal("Transcription")))
+        g.add((ta, SC.forMotivation, SC.painting))
 
         za = self.zone_annotations = BNode()
         g.add((self.uri, ORE.aggregates, za))
@@ -36,7 +36,8 @@ class Manifest(object):
         self._build()
 
     def jsonld(self, indent=2):
-        j = self.g.serialize(format='json-ld', context=self._context())
+        j = self.g.serialize(format='json-ld') #, context=self._context())
+        self.g.serialize(open('x.rdf', 'w'))
         j = json.loads(j)
         j = pyld.jsonld.compact(j, self._context())
         return j
@@ -58,18 +59,35 @@ class Manifest(object):
     def _add_canvases(self):
         g = self.g
 
+        # add the list of sequences
+        sequences_uri = BNode()
+        g.add((self.uri, SC.hasSequences, sequences_uri))
+        g.add((sequences_uri, RDF.type, RDF.List))
+
+        # add the sequence, which itself is list of canvases
         sequence_uri = BNode()
-        g.add((self.uri, SC.hasSequences, sequence_uri))
+        g.add((sequences_uri, RDF.first, sequence_uri))
+        g.add((sequences_uri, RDF.rest, RDF.nil))
         g.add((sequence_uri, RDF.type, SC.Sequence))
         g.add((sequence_uri, RDF.type, RDF.List))
         g.add((sequence_uri, RDF.rest, RDF.nil))
         g.add((sequence_uri, RDFS.label, Literal("Physical sequence")))
 
+        # add the image list
+        image_list_uri = BNode()
+        g.add((self.uri, SC.hasImageAnnotations, image_list_uri))
+        g.add((image_list_uri, RDF.type, RDF.List))
+
+        # add the canvas list
+        canvas_list_uri = BNode()
+        g.add((self.uri, SC.hasCanvases, canvas_list_uri))
+        g.add((canvas_list_uri, RDF.type, RDF.List))
+
+        # now add each surface
         for surface in self.tei.surfaces:
 
             # add the canvas
             canvas_uri = BNode()
-            g.add((self.uri, SC.hasCanvases, canvas_uri))
             g.add((canvas_uri, RDF.type, SC.Canvas))
             g.add((canvas_uri, RDFS.label, Literal(surface.folio)))
             g.add((canvas_uri, SGA.folioLabel, Literal(surface.folio)))
@@ -77,6 +95,10 @@ class Manifest(object):
             g.add((canvas_uri, SGA.handLabel, Literal(surface.hand)))
             g.add((canvas_uri, EXIF.height, Literal(surface.height)))
             g.add((canvas_uri, EXIF.width, Literal(surface.width)))
+            g.add((canvas_list_uri, RDF.first, canvas_uri))
+            next_canvas_list_uri = BNode()
+            g.add((canvas_list_uri, RDF.rest, next_canvas_list_uri))
+            canvas_list_uri = next_canvas_list_uri
 
             # add the image
             image_uri = URIRef(surface.image)
@@ -84,13 +106,16 @@ class Manifest(object):
             g.add((image_uri, EXIF.height, Literal(surface.height)))
             g.add((image_uri, EXIF.width, Literal(surface.width)))
             g.add((image_uri, SC.hasRelatedService, URIRef("http://tiles2.bodleian.ox.ac.uk:8080/adore-djatoka/resolver")))
+            g.add((image_list_uri, RDF.first, image_uri))
+            next_image_list_uri = BNode()
+            g.add((image_list_uri, RDF.rest, next_image_list_uri))
+            image_list_uri = next_image_list_uri
           
             # add the image annotation
             image_ann_uri = BNode()
             g.add((image_ann_uri, RDF.type, OA.Annotation))
             g.add((image_ann_uri, OA.hasTarget, canvas_uri))
             g.add((image_ann_uri, OA.hasBody, URIRef(surface.image)))
-            g.add((self.uri, SC.hasImageAnnotations, image_ann_uri))
 
             # add the canvas to the sequence
             g.add((sequence_uri, RDF.first, canvas_uri))
@@ -106,6 +131,8 @@ class Manifest(object):
 
         # close off the sequence list
         g.add((sequence_uri, RDF.rest, RDF.nil))
+        g.add((image_list_uri, RDF.rest, RDF.nil))
+        g.add((canvas_list_uri, RDF.rest, RDF.nil))
 
     def _add_zone_annotations(self, surface, canvas):
         g = self.g
@@ -158,7 +185,7 @@ class Manifest(object):
         if type(a) == tei.Line:
             ann_type = SGA.LineAnnotation
         elif type(a) == tei.Delete:
-            ann_type = SGA.DeleteAnnotation
+            ann_type = SGA.DeletionAnnotation
         elif type(a) == tei.Add:
             ann_type = SGA.AdditionAnnotation
 
@@ -189,6 +216,21 @@ class Manifest(object):
         g.add((selector, RDF.type, OAX.TextOffsetSelector))
         g.add((selector, OAX.begin, Literal(a.begin)))
         g.add((selector, OAX.end, Literal(a.end)))
+
+        # link SpecificResource to CSS as needed
+        if ann_type == SGA.AdditionAnnotation and a.place: 
+            if a.place == "superlinear":
+                text = "vertical-align: super;"
+            elif a.place == "sublinear":
+                text = "vertical-align: sub;"
+            else:
+                text = None
+            if text:
+                css = BNode()
+                g.add((target, OA.hasStyle, css))
+                g.add((css, RDF.type, CNT.ContentAsText))
+                g.add((css, DC['format'], Literal("text/css")))
+                g.add((css, CNT.chars, Literal(text)))
 
     def _context(self):
       # TODO: pare this down, and make it more sane over time

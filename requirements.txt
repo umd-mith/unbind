@@ -2,5 +2,5 @@ six
 pyld
 pytest
 rdflib
-rdflib_jsonld
+git+https://github.com/RDFLib/rdflib-jsonld.git#egg=rdflib_jsonld
 teizone

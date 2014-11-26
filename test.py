@@ -83,16 +83,25 @@ def test_jsonld():
     assert manifest
 
     # check for images
-    # assert 'images' in manifest
+    assert 'images' in manifest
+
+    # check for canvases
+    assert 'canvases' in manifest
 
     # get the sequence
-    assert 'sc:hasSequences' in manifest
-    seq = get(jsonld, manifest['sc:hasSequences']['@id'])
+    assert 'sequences' in manifest
+    seq = get(jsonld, manifest['sequences'][0])
 
     # first canvas
     assert 'first' in seq
     canvas = get(jsonld, seq['first'])
     assert canvas['label'] == '1r'
+
+    # check the content annotations
+    assert count_type(jsonld, 'sc:ContentAnnotation') == 90
+   
+    # css should be there
+    assert count_type(jsonld, 'cnt:ContentAsText') == 49
 
     # parse the json-ld as rdf
     register('json-ld', Parser, 'rdflib_jsonld.parser', 'JsonLDParser')
@@ -110,3 +119,12 @@ def get(jsonld, id):
         if o['@id'] == id:
             return o
     return None
+
+def count_type(jsonld, resource_type):
+    count = 0
+    for r in jsonld['@graph']:
+        if '@type' in r and resource_type in r['@type']:
+            count += 1
+    return count
+
+

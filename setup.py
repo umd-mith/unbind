@@ -14,9 +14,6 @@ class PyTest(Command):
         import pytest
         pytest.main("test.py")
 
-# get requirements
-requirements = [r.strip() for r in open('requirements.txt')]
-
 setup(
     name = 'unbound',
     version = '0.0.1',
@@ -26,6 +23,5 @@ setup(
     scripts = ['bin/unbind'],
     description = 'Write SGA TEI as SharedCanvas',
     cmdclass = {'test': PyTest},
-    install_requires = requirements,
     tests_require=['pytest'],
 )
