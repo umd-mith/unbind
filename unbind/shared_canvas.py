@@ -222,7 +222,7 @@ class Manifest(object):
         if a.rend:
             m = re.match('indent(\d+)', a.rend)
             if m:
-                indent = m.group(1)
+                indent = int(m.group(1))
                 g.add((annotation, SGA.textIndentLevel, Literal(indent)))
             else:
                 g.add((annotation, SGA.textAlignment, Literal(a.rend)))
