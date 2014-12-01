@@ -32,6 +32,7 @@ class Manifest(object):
 
         ta = self.text_annotations = BNode()
         g.add((self.uri, ORE.aggregates, ta))
+        g.add((ta, RDF.type, ORE.Aggregation))
         g.add((ta, RDF.type, SC.AnnotationList))
         g.add((ta, RDF.type, SC.Layer))
         g.add((ta, RDFS.label, Literal("Transcription")))
@@ -39,9 +40,18 @@ class Manifest(object):
 
         za = self.zone_annotations = BNode()
         g.add((self.uri, ORE.aggregates, za))
+        g.add((za, RDF.type, ORE.Aggregation))
         g.add((za, RDF.type, SC.AnnotationList))
         g.add((za, RDF.type, SC.Layer))
         g.add((za, RDFS.label, Literal("Zones")))
+
+        ha = self.html_annotations = BNode()
+        g.add((self.uri, ORE.aggregates, ha))
+        g.add((ha, RDF.type, SC.AnnotationList))
+        g.add((ha, RDF.type, ORE.Aggregation))
+        g.add((ha, RDF.type, SC.Layer))
+        g.add((ha, SC.forMotivation, SGA.reading))
+        g.add((ha, RDFS.label, Literal("Reading layer")))
 
         self._build(page)
 
@@ -56,11 +66,18 @@ class Manifest(object):
         j = self.g.serialize(format='json-ld')
         j = json.loads(j)
         j = pyld.jsonld.compact(j, self._context())
-
         return j
 
     def tei_url(self, surface):
         return urljoin(self.uri, surface.relative_path)
+
+    def html_url(self, surface):
+        # a hack until we've got a better way of coordinating the deployment
+        # of the xml, html and images
+        html_url = 'http://shelleygodwinarchive.org/tei/readingTEI/html'
+        html_url += surface.relative_path.replace('/data/tei/ox', '')
+        html_url = html_url.replace('.xml', '.html')
+        return html_url
 
     def _build(self, page=None):
         self.g.add((self.uri, RDF.type, SC.Manifest))
@@ -128,7 +145,7 @@ class Manifest(object):
             g.add((image_uri, DC['format'], Literal('image/jp2')))
             g.add((image_uri, EXIF.height, Literal(surface.height)))
             g.add((image_uri, EXIF.width, Literal(surface.width)))
-            g.add((image_uri, SC.hasRelatedService, URIRef("http://tiles2.bodleian.ox.ac.uk:8080/adore-djatoka/resolver")))
+            g.add((image_uri, SC.hasRelatedService, URIRef("http://shelleygodwinarchive.org/adore-djatoka/resolver")))
 
             # add the image annotation
             image_ann_uri = BNode()
@@ -151,6 +168,9 @@ class Manifest(object):
 
             # add the line annotations
             self._add_text_annotations(surface)
+
+            # add the html annotations
+            self._add_html_annotations(surface, canvas_uri)
 
         # close off the sequence list
         g.add((sequence_uri, RDF.rest, RDF.nil))
@@ -254,6 +274,15 @@ class Manifest(object):
                 g.add((css, RDF.type, CNT.ContentAsText))
                 g.add((css, DC['format'], Literal("text/css")))
                 g.add((css, CNT.chars, Literal(text)))
+
+    def _add_html_annotations(self, surface, canvas_uri):
+        ann = BNode()
+        g = self.g
+        g.add((self.html_annotations, ORE.aggregates, ann))
+        g.add((ann, RDF.type, OA.Annotation))
+        g.add((ann, SC.motivatedBy, SGA.reading))
+        g.add((ann, OA.hasTarget, canvas_uri))
+        g.add((ann, OA.hasBody, URIRef(self.html_url(surface))))
 
     def _context(self):
       # TODO: pare this down, and make it more sane over time
