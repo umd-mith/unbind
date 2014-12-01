@@ -2,18 +2,20 @@
 
 import sys
 import json
+import argparse
 
 import unbind.shared_canvas
 
-if len(sys.argv) != 3:
-    print
-    print "usage: unbind tei.xml http://example.com/manifest/"
-    print
-    sys.exit(1)
+parser = argparse.ArgumentParser(description="Generate Shared Canvas manifest.")
+parser.add_argument('tei', help='path to a TEI document')
+parser.add_argument('uri', help='URI for the published manifest')
+parser.add_argument('--page', dest='page', type=int, help="Only include a specific page in the manifest.")
 
-tei_file = sys.argv[1]
-sc_manifest_uri = sys.argv[2]
+args = parser.parse_args()
+if args.page:
+    m = unbind.shared_canvas.Manifest(args.tei, args.uri, page=args.page)
+else:
+    m = unbind.shared_canvas.Manifest(args.tei, args.uri)
 
-m = unbind.shared_canvas.Manifest(tei_file, sc_manifest_uri)
 j = m.jsonld()
 print json.dumps(j, indent=2)

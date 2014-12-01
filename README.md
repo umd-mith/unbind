@@ -1,6 +1,6 @@
 # unbind
 
-[![Build Status](https://travis-ci.org/umd-mith/unbind.svg)](http://travis-ci.org/umd-mith/unbind)
+[![Build Status](https://travis-ci.org/umd-mith/unbind.svg)](http://travis-ci.org/umd-mith/unbind)[![Coverage Status](https://coveralls.io/repos/umd-mith/unbind/badge.png)](https://coveralls.io/r/umd-mith/unbind)
 
 unbind is a Python utility for generating a [Shared Canvas](http://iiif.io/model/shared-canvas/1.0/index.html) manifest from [Shelley-Godwin TEI](http://github.com/umd-mith/sga/). It's also a work in progress...
 

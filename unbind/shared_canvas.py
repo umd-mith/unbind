@@ -15,7 +15,17 @@ from .namespaces import DC, OA, OAX, ORE, SC, SGA, TEI, EXIF, CNT
 
 class Manifest(object):
 
-    def __init__(self, tei_filename, manifest_uri):
+    def __init__(self, tei_filename, manifest_uri, page=None):
+        """
+        Create a Shared Canvas manifest using the path to a given TEI file 
+        and the URI where the manifest will be published. 
+
+        m = Manifest("/path/to/tei.xml", "http://example.com/manifest.jsonld")
+        
+        Optionally pass in a page number if you are debugging and want 
+        to limit the manifest to a specific page.
+        """
+
         g = self.g = ConjunctiveGraph()
         self.tei = tei.Document(tei_filename)
         self.uri = URIRef(manifest_uri)
@@ -33,19 +43,26 @@ class Manifest(object):
         g.add((za, RDF.type, SC.Layer))
         g.add((za, RDFS.label, Literal("Zones")))
 
-        self._build()
+        self._build(page)
 
     def jsonld(self, indent=2):
-        j = self.g.serialize(format='json-ld') #, context=self._context())
-        self.g.serialize(open('x.rdf', 'w'))
+        # somewhat inefficient since we are serializing the json
+        # and then reading it back in, to compact it with jsonld
+        # jsonld's compaction actually works properly with the context
+        # unlike rdflib_jsonld's at the moment. Ideally we could 
+        # also use rdflib_jsonld.serlializer.from_rdf to skip 
+        # the serialization, but unofortunately it seems to introduce 
+        # errors into the graph.
+        j = self.g.serialize(format='json-ld')
         j = json.loads(j)
         j = pyld.jsonld.compact(j, self._context())
+
         return j
 
     def tei_url(self, surface):
         return urljoin(self.uri, surface.relative_path)
 
-    def _build(self):
+    def _build(self, page=None):
         self.g.add((self.uri, RDF.type, SC.Manifest))
         self.g.add((self.uri, RDFS.label, Literal(self.tei.label)))
         self.g.add((self.uri, DC.title, Literal(self.tei.title)))
@@ -54,9 +71,9 @@ class Manifest(object):
         self.g.add((self.uri, SC.dateLabel, Literal(self.tei.date)))
         self.g.add((self.uri, SGA.stateLabel, Literal(self.tei.state)))
         self.g.add((self.uri, SC.service, URIRef(self.tei.service)))
-        self._add_canvases()
+        self._add_canvases(page)
 
-    def _add_canvases(self):
+    def _add_canvases(self, page=None):
         g = self.g
 
         # add the list of sequences
@@ -84,7 +101,13 @@ class Manifest(object):
         g.add((canvas_list_uri, RDF.type, RDF.List))
 
         # now add each surface
+        page_count=0
+
         for surface in self.tei.surfaces:
+
+            page_count += 1
+            if page is not None and page_count != page:
+                continue
 
             # add the canvas
             canvas_uri = BNode()

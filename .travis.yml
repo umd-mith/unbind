@@ -1,7 +1,19 @@
 language: python
+
+python:
+  - "2.7"
+
 script: 
   - git clone https://github.com/umd-mith/sga.git
   - pip install -r requirements.txt
   - python setup.py test
-python:
-  - "2.7"
+
+after_success:
+- pip install coveralls
+- coveralls
+
+after_script:
+- coverage report
+- pip install pep8 pyflakes
+- pep8 --statistics --count *.py
+- pyflakes *.py | tee >(wc -l)
