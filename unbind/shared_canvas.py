@@ -77,7 +77,9 @@ class Manifest(object):
         return j
 
     def tei_url(self, surface):
-        return urljoin(self.uri, surface.relative_path)
+        path = surface.relative_path
+        path = path.replace('/data', '')
+        return urljoin(self.uri, path)
 
     def html_url(self, surface):
         # a hack until we've got a better way of coordinating the deployment
