@@ -95,7 +95,7 @@ class Zone(object):
     def xywh(self):
         height = int(self.lry) - int(self.uly)
         width = int(self.lrx) - int(self.ulx)
-        return "xywh:%s,%s,%s,%s" % (self.ulx, self.uly, height, width)
+        return "xywh=%s,%s,%s,%s" % (self.ulx, self.uly, height, width)
 
 
 class Line(object):
