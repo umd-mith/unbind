@@ -19,24 +19,27 @@ from .namespaces import XI, TEI, MITH, XML
 class Document(object):
 
     def __init__(self, tei_filename):
+        ns = {'tei': TEI, 'xi': XI, 'xml': XML}
         tei = etree.parse(tei_filename).getroot()
-        notebook = re.sub(r'[_-]', '/', tei.get('{%s}id' % XML))
-        
-        self.title = tei.find('.//{%s}msItem[@type="#work"]/{%s}bibl/{%s}title' % 
-            (TEI, TEI, TEI)).text
-        self.agent = tei.find('.//{%s}msItem[@type="#work"]/{%s}bibl/{%s}author' % 
-            (TEI, TEI, TEI)).text
-        self.attribution = tei.find('.//{%s}repository' % TEI).text
-        self.date = tei.find('.//{%s}msItem[@type="#volume"][0]/{%s}bibl/{%s}date' % 
-            (TEI, TEI, TEI)).text
+
+        # extract some document level metadata
+        notebook = re.sub(r'[_-]', '/', tei.get('{%(xml)s}id' % ns))
+        self.title = tei.find('.//{%(tei)s}msItem[@type="#work"]/{%(tei)s}bibl/{%(tei)s}title' % ns).text
+        self.agent = tei.find('.//{%(tei)s}msItem[@type="#work"]/{%(tei)s}bibl/{%(tei)s}author' % ns).text
+        self.attribution = tei.find('.//{%(tei)s}repository' % ns).text
+        self.date = tei.find('.//{%(tei)s}msItem[@type="#volume"][0]/{%(tei)s}bibl/{%(tei)s}date' % ns).text
         self.service = "http://shelleygodwinarchive.org/sc/%s" % notebook
-        self.state = tei.find('.//{%s}msItem[@type="#work"]/{%s}bibl' % (TEI, TEI)).get("status")
-        self.label = tei.find('.//{%s}titleStmt/{%s}title[@type="main"]' % (TEI, TEI)).text
+        self.state = tei.find('.//{%(tei)s}msItem[@type="#work"]/{%(tei)s}bibl' % ns).get("status")
+        self.label = tei.find('.//{%(tei)s}titleStmt/{%(tei)s}title[@type="main"]' % ns).text
+
+        # get the hands that are used
         self.hands = {}
-        for hand in tei.findall('.//{%s}physDesc//{%s}handNote' % (TEI, TEI)):
-            self.hands[hand.get('{%s}id' % XML)] = hand.findall('{%s}persName' % TEI)[0].text
+        for hand in tei.findall('.//{%(tei)s}physDesc//{%(tei)s}handNote' % ns):
+            self.hands[hand.get('{%(xml)s}id' % ns)] = hand.findall('{%(tei)s}persName' % ns)[0].text
+
+        # load each surface
         self.surfaces = []
-        for inc in tei.findall('.//{%s}include' % XI):
+        for inc in tei.findall('.//{%(xi)s}include' % ns):
             filename = urljoin(tei_filename, inc.attrib['href'])
             surface = Surface(filename, self)
             self.surfaces.append(surface)
