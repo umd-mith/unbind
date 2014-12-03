@@ -30,7 +30,7 @@ def test_surface():
     assert len(s.zones) == 3
     z = s.zones[2]
 
-    assert z.xywh == "xywh=0,333,6327,5410"
+    assert z.xywh == "xywh=0,333,5410,6327"
     assert len(z.lines) == 15
 
     l = z.lines[0]
