@@ -6,11 +6,14 @@ unbind is a Python utility for generating a [Shared Canvas](http://iiif.io/model
 
 ## Setup
 
+    git clone https://github.com/umd-mith/unbind.git
+    cd unbind
+    pip install -r requirements.txt
     python setup.py install
 
-or if you'd rather install it so you can develop it:
+or if you'd rather install it so you can work on it:
 
-    python setup.py install --develop
+    python setup.py develop
 
 ## Command Line
 
