@@ -13,31 +13,38 @@ from xml.sax import make_parser
 from xml.sax.handler import ContentHandler
 from xml.etree import ElementTree as etree
 
-from .namespaces import XI, TEI, MITH
+from .namespaces import XI, TEI, MITH, XML
 
 
 class Document(object):
 
     def __init__(self, tei_filename):
         tei = etree.parse(tei_filename).getroot()
-        # XXX: get these from the TEI document
-        self.title = "Frankenstein"
-        self.agent = "Mary Shelley"
-        self.attribution = "Bodleian Library, University of Oxford"
-        self.date = "18 April-[?13] May 1817"
-        self.service = "http://dev.shelleygodwinarchive.org/sc/oxford/frankenstein/notebook/c1"
-        self.state = "Fair copy"
-        self.label = "Fair-Copy Notebook C1"
+        notebook = re.sub(r'[_-]', '/', tei.get('{%s}id' % XML))
+        
+        self.title = tei.find('.//{%s}msItem[@type="#work"]/{%s}bibl/{%s}title' % 
+            (TEI, TEI, TEI)).text
+        self.agent = tei.find('.//{%s}msItem[@type="#work"]/{%s}bibl/{%s}author' % 
+            (TEI, TEI, TEI)).text
+        self.attribution = tei.find('.//{%s}repository' % TEI).text
+        self.date = tei.find('.//{%s}msItem[@type="#volume"][0]/{%s}bibl/{%s}date' % 
+            (TEI, TEI, TEI)).text
+        self.service = "http://shelleygodwinarchive.org/sc/%s" % notebook
+        self.state = tei.find('.//{%s}msItem[@type="#work"]/{%s}bibl' % (TEI, TEI)).get("status")
+        self.label = tei.find('.//{%s}titleStmt/{%s}title[@type="main"]' % (TEI, TEI)).text
+        self.hands = {}
+        for hand in tei.findall('.//{%s}physDesc//{%s}handNote' % (TEI, TEI)):
+            self.hands[hand.get('{%s}id' % XML)] = hand.findall('{%s}persName' % TEI)[0].text
         self.surfaces = []
         for inc in tei.findall('.//{%s}include' % XI):
             filename = urljoin(tei_filename, inc.attrib['href'])
-            surface = Surface(filename)
+            surface = Surface(filename, self)
             self.surfaces.append(surface)
 
 
 class Surface(object):
 
-    def __init__(self, filename):
+    def __init__(self, filename, document=None):
         self.filename = filename
 
         # TODO: at some point we should write the canonical coordinates to the 
@@ -56,8 +63,18 @@ class Surface(object):
         self.folio = tei.attrib.get("{%s}folio" % MITH)
         self.shelfmark = tei.attrib.get("{%s}shelfmark" % MITH)
         self.image = tei.find('.//{%s}graphic' % TEI).get('url')
-        # XXX: get this from the TEI document
-        self.hand = "Mary Shelley"
+        # Mary Shelley is added by default for now. Need to update TEI.
+        self.hands_label = "Mary Shelley"
+
+        # Only attempt to populate Document-dependent 
+        # properties when the document object is available
+        if document:         
+            self.hands = []
+            for hand in tei.findall('.//*[@hand]'):
+                h_id = hand.get('hand')[1:]
+                if h_id in document.hands and h_id not in self.hands:
+                    self.hands.append(h_id)
+                    self.hands_label += ", %s" % document.hands[h_id]
         
         # use a SAX parser to get the line annotations
         # since we need to keep track of text offsets 

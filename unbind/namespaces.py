@@ -11,4 +11,4 @@ SGA  =  Namespace('http://www.shelleygodwinarchive.org/ns1#')
 TEI  =  Namespace('http://www.tei-c.org/ns/1.0')
 XI   =  Namespace('http://www.w3.org/2001/XInclude')
 EXIF =  Namespace('http://www.w3.org/2003/12/exif/ns#')
-
+XML  =  Namespace('http://www.w3.org/XML/1998/namespace')

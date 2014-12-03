@@ -140,7 +140,7 @@ class Manifest(object):
             g.add((canvas_uri, RDFS.label, Literal(surface.folio)))
             g.add((canvas_uri, SGA.folioLabel, Literal(surface.folio)))
             g.add((canvas_uri, SGA.shelfmarkLabel, Literal(surface.shelfmark)))
-            g.add((canvas_uri, SGA.handLabel, Literal(surface.hand)))
+            g.add((canvas_uri, SGA.handLabel, Literal(surface.hands_label)))
             g.add((canvas_uri, EXIF.height, Literal(surface.height)))
             g.add((canvas_uri, EXIF.width, Literal(surface.width)))
             g.add((canvas_list_uri, RDF.first, canvas_uri))
