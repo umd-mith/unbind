@@ -53,6 +53,14 @@ class Manifest(object):
         g.add((ha, SC.forMotivation, SGA.reading))
         g.add((ha, RDFS.label, Literal("Reading layer")))
 
+        xa = self.xml_annotations = BNode()
+        g.add((self.uri, ORE.aggregates, xa))
+        g.add((xa, RDF.type, SC.AnnotationList))
+        g.add((xa, RDF.type, ORE.Aggregation))
+        g.add((xa, RDF.type, SC.Layer))
+        g.add((xa, SC.forMotivation, SGA.source))
+        g.add((xa, RDFS.label, Literal("TEI source")))
+
         self._build(page)
 
     def jsonld(self, indent=2):
@@ -172,6 +180,9 @@ class Manifest(object):
             # add the html annotations
             self._add_html_annotations(surface, canvas_uri)
 
+            # add the xml annotations
+            self._add_xml_annotations(surface, canvas_uri)
+
         # close off the sequence list
         g.add((sequence_uri, RDF.rest, RDF.nil))
         g.add((image_list_uri, RDF.rest, RDF.nil))
@@ -283,6 +294,15 @@ class Manifest(object):
         g.add((ann, SC.motivatedBy, SGA.reading))
         g.add((ann, OA.hasTarget, canvas_uri))
         g.add((ann, OA.hasBody, URIRef(self.html_url(surface))))
+
+    def _add_xml_annotations(self, surface, canvas_uri):
+        ann = BNode()
+        g = self.g
+        g.add((self.xml_annotations, ORE.aggregates, ann))
+        g.add((ann, RDF.type, OA.Annotation))
+        g.add((ann, SC.motivatedBy, SGA.source))
+        g.add((ann, OA.hasTarget, canvas_uri))
+        g.add((ann, OA.hasBody, URIRef(self.tei_url(surface))))
 
     def _context(self):
       # TODO: pare this down, and make it more sane over time
