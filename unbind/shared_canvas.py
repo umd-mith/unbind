@@ -266,6 +266,9 @@ class Manifest(object):
         g.add((target, RDF.type, OA.SpecificResource))
         g.add((target, OA.hasSource, URIRef(self.tei_url(surface))))
 
+        if a.hand:
+            g.add((target, SGA.hasClass, Literal('hand-' + a.hand)))
+
         # link SpecificResource and TextOffsetSelector
         selector = BNode()
         g.add((target, OA.hasSelector, selector))

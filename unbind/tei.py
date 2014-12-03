@@ -125,6 +125,8 @@ class Line(object):
         self.end = 0
         self.text = ""
         self.rend = None
+        self.hand = None
+        self.hand_attr = None
 
 class Add(object):
     def __init__(self):
@@ -133,6 +135,8 @@ class Add(object):
         self.text = ""
         self.rend = None
         self.place = None
+        self.hand = None
+        self.hand_attr = None
 
 class Delete(object):
     def __init__(self):
@@ -140,6 +144,8 @@ class Delete(object):
         self.end = 0
         self.text = ""
         self.rend = None
+        self.hand = None
+        self.hand_attr = None
 
 class Highlight(object):
     def __init__(self):
@@ -147,6 +153,8 @@ class Highlight(object):
         self.end = 0
         self.text = ""
         self.rend = None
+        self.hand = None
+        self.hand_attr = None
 
 class LineOffsetHandler(ContentHandler):
     """
@@ -161,9 +169,19 @@ class LineOffsetHandler(ContentHandler):
         self.pos = 0
         self.height = None
         self.width = None
+        self.hand_stack = ["mws"] # We must assume mws as default. This needs to be fixed in the TEI.
         self.stack = []
 
     def startElement(self, name, attrs):
+
+        def _determine_hand(hand):
+            if hand:
+                if hand[0]=="#": hand = hand[1:]
+                if self.hand_stack[-1] != hand:
+                    self.hand_stack.append(hand)
+                return hand
+            return self.hand_stack[-1]
+
         if name == "zone":
             z = Zone(attrs)
             z.begin = self.pos
@@ -173,6 +191,8 @@ class LineOffsetHandler(ContentHandler):
             l = Line()
             l.begin = self.pos
             l.rend = attrs.get('rend')
+            l.hand_attr = attrs.get('hand')
+            l.hand = _determine_hand(l.hand_attr)
             self.zones[-1].lines.append(l)
             self.stack.append(l)
         elif name == "add":
@@ -180,25 +200,42 @@ class LineOffsetHandler(ContentHandler):
             a.begin = self.pos
             a.rend = attrs.get('rend')
             a.place = attrs.get('place')
+            a.hand_attr = attrs.get('hand')
+            a.hand = _determine_hand(a.hand_attr)
             self.zones[-1].adds.append(a)
             self.stack.append(a)
         elif name == "del":
             d = Delete()
             d.begin = self.pos
             d.rend = attrs.get('rend')
+            d.hand_attr = attrs.get('hand')
+            d.hand = _determine_hand(d.hand_attr)
             self.zones[-1].deletes.append(d)
             self.stack.append(d)
         elif name == "hi":
             h = Highlight()
             h.begin = self.pos
             h.rend = attrs.get('rend')
+            h.hand_attr = attrs.get('hand')
+            h.hand = _determine_hand(h.hand_attr)
             self.zones[-1].highlights.append(h)
             self.stack.append(h)
+        elif name == "handShift":
+            hand = attrs.get('new')
+            if hand:
+                if hand[0]=="#": hand = hand[1:]
+                if self.hand_stack[-1] != hand:
+                    # set new hand at the top of the stack
+                    self.hand_stack[-1] = hand
+                
 
     def endElement(self, name):
         if name in ("zone", "line", "add", "del", "hi"):
             e = self.stack.pop()
             e.end = self.pos
+            # pop hand from stack if it was specified as an attribute
+            if name != "zone" and e.hand_attr == self.hand_stack[-1]:
+                self.hand_stack.pop()
    
     def characters(self, content):
         self.pos += len(content) # TODO: does unicode matter here?
