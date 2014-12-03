@@ -25,8 +25,8 @@ manifest, and it will write a Shared Canvas document as JSON-LD to stdout:
 
 ##  As a Library
 
-To create a manifest you need to give `Manifest` the path to a TEI XML file
-and also a URI where the manifest is going to be published:
+To create a manifest programatically you need to give `Manifest` the path to a 
+TEI XML file, and also the URI where the manifest is going to be published:
 
 ```python
 
