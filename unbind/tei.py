@@ -233,9 +233,13 @@ class LineOffsetHandler(ContentHandler):
         if name in ("zone", "line", "add", "del", "hi"):
             e = self.stack.pop()
             e.end = self.pos
-            # pop hand from stack if it was specified as an attribute
-            if name != "zone" and e.hand_attr == self.hand_stack[-1]:
-                self.hand_stack.pop()
+            # pop hand from stack if it was specified as an attribute            
+            if name != "zone":
+                hand = e.hand_attr
+                if hand and hand[0]=="#": hand = hand[1:]
+                # make sure to keep "mws" at the bottom of the hand stack
+                if len(self.hand_stack) > 1 and hand == self.hand_stack[-1]:
+                    self.hand_stack.pop()
    
     def characters(self, content):
         self.pos += len(content) # TODO: does unicode matter here?
