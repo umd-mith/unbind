@@ -1,4 +1,6 @@
 import os
+import sys
+
 from setuptools import setup, Command
 
 class PyTest(Command):
@@ -12,7 +14,8 @@ class PyTest(Command):
         pass
     def run(self):
         import pytest
-        pytest.main("test.py")
+        errno = pytest.main("test.py")
+        sys.exit(errno)
 
 setup(
     name = 'unbound',
