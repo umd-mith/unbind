@@ -18,7 +18,3 @@ for vol in vols:
         tei_file = d + "/" + d + "-" + s + ".xml"
         fh.write('<xi:include href="' + tei_file + '" />\n')
     fh.close()
-    # /data/ox/ox-ms_abinger_c58/canvas/0059
-    # /tei/ox/ox-ms_abinger_c58/ox-ms_abinger_c58-0059.xml
-    
-
