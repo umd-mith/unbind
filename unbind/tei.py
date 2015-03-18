@@ -23,10 +23,10 @@ class Document(object):
         tei = etree.parse(tei_filename).getroot()
 
         def _getDate():
-            nb_date = tei.find('.//{%(tei)s}msItem[@class="#notebook"][0]/{%(tei)s}bibl/{%(tei)s}date' % ns).text
+            nb_date = tei.find('.//{%(tei)s}msItem[@class="#notebook"][0]/{%(tei)s}bibl/{%(tei)s}date' % ns)
             if not nb_date:
                 return tei.find('.//{%(tei)s}msItem[@class="#volume"][0]/{%(tei)s}bibl/{%(tei)s}date' % ns).text
-            return nb_date
+            return nb_date.text
 
         # extract some document level metadata
         notebook = re.sub(r'[_-]', '/', tei.get('{%(xml)s}id' % ns))
