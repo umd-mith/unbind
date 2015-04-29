@@ -116,6 +116,7 @@ class Zone(object):
         self.adds = []
         self.deletes = []
         self.highlights = []
+        self.spaces = []
 
     @property
     def xywh(self):
@@ -124,8 +125,7 @@ class Zone(object):
         return "xywh=%s,%s,%s,%s" % (self.ulx, self.uly, width, height)
 
 
-class Line(object):
-    
+class Line(object):    
     def __init__(self):
         self.begin = 0
         self.end = 0
@@ -133,6 +133,16 @@ class Line(object):
         self.rend = None
         self.hand = None
         self.hand_attr = None
+
+class Space(object):    
+    def __init__(self):
+        self.begin = 0
+        self.end = 0
+        self.text = ""
+        self.rend = None
+        self.hand = None
+        self.hand_attr = None
+        self.ext = 0
 
 class Add(object):
     def __init__(self):
@@ -233,7 +243,14 @@ class LineOffsetHandler(ContentHandler):
                 if self.hand_stack[-1] != hand:
                     # set new hand at the top of the stack
                     self.hand_stack[-1] = hand
-                
+        # Turn vertical spaces into lines
+        elif name == "space":
+            if attrs.get('dim') == 'vertical':
+                s = Space()
+                s.begin = self.pos
+                s.end = self.pos
+                s.ext = int(attrs.get('extent'))
+                self.zones[-1].spaces.append(s)
 
     def endElement(self, name):
         if name in ("zone", "line", "add", "del", "hi"):

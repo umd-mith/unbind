@@ -235,6 +235,8 @@ class Manifest(object):
                 self._add_text_annotation(add, surface)
             for delete in zone.deletes:
                 self._add_text_annotation(delete, surface)
+            for space in zone.spaces:
+                self._add_text_annotation(space, surface)
 
     def _add_text_annotation(self, a, surface):
         g = self.g
@@ -244,6 +246,8 @@ class Manifest(object):
             ann_type = SGA.DeletionAnnotation
         elif type(a) == tei.Add:
             ann_type = SGA.AdditionAnnotation
+        elif type(a) == tei.Space:
+            ann_type = SGA.SpaceAnnotation
 
         # link AnnotationList to Annotation
         annotation = BNode()
@@ -259,6 +263,8 @@ class Manifest(object):
                 g.add((annotation, SGA.textIndentLevel, Literal(indent)))
             else:
                 g.add((annotation, SGA.textAlignment, Literal(a.rend)))
+        if ann_type == SGA.SpaceAnnotation:
+            g.add((annotation, SGA.spaceExt, Literal(a.ext)))
    
         # link LineAnnotation to SpecificResource and TEI file
         target = BNode()
