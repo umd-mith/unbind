@@ -239,6 +239,10 @@ class Manifest(object):
                 self._add_text_annotation(space, surface)
 
     def _add_text_annotation(self, a, surface):
+        # Skip possible *Span elements that failed to get an end pos
+        if not a.end:
+            return 0
+
         g = self.g
         if type(a) == tei.Line:
             ann_type = SGA.LineAnnotation

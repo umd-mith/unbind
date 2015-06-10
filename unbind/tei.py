@@ -148,6 +148,7 @@ class Add(object):
     def __init__(self):
         self.begin = 0
         self.end = 0
+        self.spanTo = None
         self.text = ""
         self.rend = None
         self.place = None
@@ -158,6 +159,7 @@ class Delete(object):
     def __init__(self):
         self.begin = 0
         self.end = 0
+        self.spanTo = None
         self.text = ""
         self.rend = None
         self.hand = None
@@ -220,6 +222,14 @@ class LineOffsetHandler(ContentHandler):
             a.hand = _determine_hand(a.hand_attr)
             self.zones[-1].adds.append(a)
             self.stack.append(a)
+        elif name == "addSpan":
+            d = Add()
+            d.begin = self.pos
+            d.spanTo = attrs.get('spanTo')[1:] # remove hash right away
+            d.rend = attrs.get('rend')
+            d.hand_attr = attrs.get('hand')
+            d.hand = _determine_hand(d.hand_attr)
+            self.zones[-1].adds.append(d)
         elif name == "del":
             d = Delete()
             d.begin = self.pos
@@ -228,6 +238,14 @@ class LineOffsetHandler(ContentHandler):
             d.hand = _determine_hand(d.hand_attr)
             self.zones[-1].deletes.append(d)
             self.stack.append(d)
+        elif name == "delSpan":
+            d = Delete()
+            d.begin = self.pos
+            d.spanTo = attrs.get('spanTo')[1:] # remove hash right away
+            d.rend = attrs.get('rend')
+            d.hand_attr = attrs.get('hand')
+            d.hand = _determine_hand(d.hand_attr)
+            self.zones[-1].deletes.append(d)
         elif name == "hi":
             h = Highlight()
             h.begin = self.pos
@@ -251,6 +269,19 @@ class LineOffsetHandler(ContentHandler):
                 s.end = self.pos
                 s.ext = int(attrs.get('extent'))
                 self.zones[-1].spaces.append(s)
+        elif name == "anchor":
+            # anchors must always occur after the anchored element
+            # so looking back is safe
+            anchor_id = attrs.get('xml:id')
+            for zone in self.zones:
+                for delete in zone.deletes:
+                    spanTo = delete.spanTo
+                    if spanTo and spanTo == anchor_id:
+                        delete.end = self.pos
+                for add in zone.adds:
+                    spanTo = add.spanTo
+                    if spanTo and spanTo == anchor_id:
+                        add.end = self.pos
 
     def endElement(self, name):
         if name in ("zone", "line", "add", "del", "hi"):
