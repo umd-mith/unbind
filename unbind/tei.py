@@ -22,20 +22,14 @@ class Document(object):
         ns = {'tei': TEI, 'xi': XI, 'xml': XML}
         tei = etree.parse(tei_filename).getroot()
 
-        def _getDate():
-            nb_date = tei.find('.//{%(tei)s}msItem[@class="#notebook"][0]/{%(tei)s}bibl/{%(tei)s}date' % ns)
-            if not nb_date:
-                return tei.find('.//{%(tei)s}msItem[@class="#volume"][0]/{%(tei)s}bibl/{%(tei)s}date' % ns).text
-            return nb_date.text
-
         # extract some document level metadata
-        notebook = re.sub(r'[_-]', '/', tei.get('{%(xml)s}id' % ns))
+        page_sequence = re.sub(r'[_-]', '/', tei.get('{%(xml)s}id' % ns))
         self.title = tei.find('.//{%(tei)s}msItem[@class="#work"][0]/{%(tei)s}bibl/{%(tei)s}title' % ns).text
         self.agent = tei.find('.//{%(tei)s}msItem[@class="#work"][0]/{%(tei)s}bibl/{%(tei)s}author' % ns).text
         self.attribution = tei.find('.//{%(tei)s}repository' % ns).text
-        self.date = _getDate()
-        self.service = "http://shelleygodwinarchive.org/sc/%s" % notebook
-        self.state = tei.find('.//{%(tei)s}msItem[@class="#work"]/{%(tei)s}bibl' % ns).get("status")
+        self.date = tei.find('.//{%(tei)s}msItem/{%(tei)s}bibl/{%(tei)s}date' % ns).text
+        self.service = "http://shelleygodwinarchive.org/sc/%s" % page_sequence
+        self.state = tei.find('.//{%(tei)s}msItem[@class="#work"]/{%(tei)s}bibl' % ns).get("status").replace("_", " ")
         self.label = tei.find('.//{%(tei)s}titleStmt/{%(tei)s}title[@type="main"]' % ns).text
 
         # get the hands that are used
