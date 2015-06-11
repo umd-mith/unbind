@@ -84,7 +84,7 @@ class Manifest(object):
     def html_url(self, surface):
         # a hack until we've got a better way of coordinating the deployment
         # of the xml, html and images
-        html_url = 'http://shelleygodwinarchive.org/tei/readingTEI/html'
+        html_url = 'http://54.166.84.180/tei/readingTEI/html'
         html_url += surface.relative_path.replace('/data/tei/ox', '')
         html_url = html_url.replace('.xml', '.html')
         return html_url
@@ -193,36 +193,46 @@ class Manifest(object):
     def _add_zone_annotations(self, surface, canvas):
         g = self.g
 
+        accepted_types = [
+            "top",
+            "left_margin",
+            "main",
+            "pagination",
+            "library"
+            ]
+
         for zone in surface.zones:
 
-            annotation = BNode()
-            g.add((self.zone_annotations, ORE.aggregates, annotation))
-            g.add((annotation, RDF.type, OA.Annotation))
-            g.add((annotation, RDF.type, SC.ContentAnnotation))
+            if zone.type in accepted_types:
 
-            body = BNode()
-            g.add((annotation, OA.hasBody, body))
-            g.add((body, RDF.type, OA.SpecificResource))
+                annotation = BNode()
+                g.add((self.zone_annotations, ORE.aggregates, annotation))
+                g.add((annotation, RDF.type, OA.Annotation))
+                g.add((annotation, RDF.type, SC.ContentAnnotation))
 
-            # construct a URL for the tei xml file assuming that the 
-            # sga data is mounted next to the manifest
-            g.add((body, OA.hasSource, URIRef(self.tei_url(surface))))
+                body = BNode()
+                g.add((annotation, OA.hasBody, body))
+                g.add((body, RDF.type, OA.SpecificResource))
 
-            selector = BNode()
-            g.add((body, OA.hasSelector, selector))
-            g.add((selector, RDF.type, OAX.TextOffsetSelector))
-            g.add((selector, OAX.begin, Literal(zone.begin)))
-            g.add((selector, OAX.end, Literal(zone.end)))
+                # construct a URL for the tei xml file assuming that the 
+                # sga data is mounted next to the manifest
+                g.add((body, OA.hasSource, URIRef(self.tei_url(surface))))
 
-            target = BNode()
-            g.add((annotation, OA.hasTarget, target))
-            g.add((target, RDF.type, OA.SpecificResource))
-            g.add((target, OA.hasSource, canvas))
+                selector = BNode()
+                g.add((body, OA.hasSelector, selector))
+                g.add((selector, RDF.type, OAX.TextOffsetSelector))
+                g.add((selector, OAX.begin, Literal(zone.begin)))
+                g.add((selector, OAX.end, Literal(zone.end)))
 
-            selector = BNode()
-            g.add((target, OA.hasSelector, selector))
-            g.add((selector, RDF.type, OA.FragmentSelector))
-            g.add((selector, RDF.value, Literal(zone.xywh)))
+                target = BNode()
+                g.add((annotation, OA.hasTarget, target))
+                g.add((target, RDF.type, OA.SpecificResource))
+                g.add((target, OA.hasSource, canvas))
+
+                selector = BNode()
+                g.add((target, OA.hasSelector, selector))
+                g.add((selector, RDF.type, OA.FragmentSelector))
+                g.add((selector, RDF.value, Literal(zone.xywh)))
 
     def _add_text_annotations(self, surface):
         g = self.g

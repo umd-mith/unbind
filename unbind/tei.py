@@ -110,6 +110,7 @@ class Zone(object):
         self.uly = attrs.get('uly', 0)
         self.lrx = attrs.get('lrx', 0)
         self.lry = attrs.get('lry', 0)
+        self.type = None
         self.begin = 0
         self.end = 0
         self.lines = []
@@ -203,6 +204,7 @@ class LineOffsetHandler(ContentHandler):
         if name == "zone":
             z = Zone(attrs)
             z.begin = self.pos
+            z.type = attrs.get("type")
             self.zones.append(z)
             self.stack.append(z)
         elif name == "line":
@@ -236,8 +238,10 @@ class LineOffsetHandler(ContentHandler):
             d.rend = attrs.get('rend')
             d.hand_attr = attrs.get('hand')
             d.hand = _determine_hand(d.hand_attr)
-            self.zones[-1].deletes.append(d)
             self.stack.append(d)
+            # Don't add it to a zone if it's unmarked
+            if d.rend != 'unmarked':
+                self.zones[-1].deletes.append(d)
         elif name == "delSpan":
             d = Delete()
             d.begin = self.pos
@@ -245,7 +249,9 @@ class LineOffsetHandler(ContentHandler):
             d.rend = attrs.get('rend')
             d.hand_attr = attrs.get('hand')
             d.hand = _determine_hand(d.hand_attr)
-            self.zones[-1].deletes.append(d)
+            # Don't add it to a zone if it's unmarked
+            if d.rend != 'unmarked':
+                self.zones[-1].deletes.append(d)
         elif name == "hi":
             h = Highlight()
             h.begin = self.pos
