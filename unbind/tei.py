@@ -37,6 +37,17 @@ class Document(object):
         for hand in tei.findall('.//{%(tei)s}physDesc//{%(tei)s}handNote[@{%(xml)s}id]' % ns):
             self.hands[hand.get('{%(xml)s}id' % ns)] = hand.findall('{%(tei)s}persName' % ns)[0].text
 
+        # get all loci to locate works scattered across pages
+        self.work_loci = {}
+        for work in tei.findall('.//{%(tei)s}msItem[@class="#work"]' % ns):
+            title = work.find('./{%(tei)s}bibl/{%(tei)s}title' % ns).text
+            title = title.strip()
+            for locus in work.findall('.//{%(tei)s}locus' % ns):                
+                targets = re.split(r'\s+', locus.attrib['target'].strip())
+                for target in targets:
+                    target = target.lstrip("#")
+                    self.work_loci[target] = title.lower().replace(' ', '_')
+
         # load each surface
         self.surfaces = []
         for inc in tei.findall('.//{%(tei)s}sourceDoc/{%(xi)s}include' % ns):
@@ -83,7 +94,7 @@ class Surface(object):
         # since we need to keep track of text offsets 
 
         parser = make_parser()
-        handler = LineOffsetHandler()
+        handler = LineOffsetHandler(document)
         parser.setContentHandler(handler)
         parser.parse(tmp_filename)
         self.zones = handler.zones
@@ -108,6 +119,7 @@ class Zone(object):
         self.begin = 0
         self.end = 0
         self.lines = []
+        self.segments = []
         self.adds = []
         self.deletes = []
         self.highlights = []
@@ -128,6 +140,19 @@ class Line(object):
         self.rend = None
         self.hand = None
         self.hand_attr = None
+        self.in_work = None
+
+class Segment(object):
+    ''' A generic text segment encoded with milestones '''
+    def __init__(self):
+        self.begin = 0
+        self.end = 0
+        self.text = ""
+        self.spanTo = None
+        self.rend = None
+        self.hand = None
+        self.hand_attr = None
+        self.in_work = None
 
 class Space(object):    
     def __init__(self):
@@ -177,12 +202,14 @@ class LineOffsetHandler(ContentHandler):
     are added to the zone that they are a part of.
     """
 
-    def __init__(self):
+    def __init__(self, document=None):
+        self.document = document
         self.zones = []
         self.pos = 0
         self.height = None
         self.width = None
         self.hand_stack = ["mws"] # We must assume mws as default. This needs to be fixed in the TEI.
+        self.work_stack = []
         self.stack = []
 
     def startElement(self, name, attrs):
@@ -194,6 +221,13 @@ class LineOffsetHandler(ContentHandler):
                     self.hand_stack.append(hand)
                 return hand
             return self.hand_stack[-1]
+
+        def _is_in_work(xmlid):
+            if xmlid:
+                xmlid = xmlid.strip()
+                if xmlid in self.document.work_loci.keys():
+                    return self.document.work_loci[xmlid]
+            return False
 
         if name == "zone":
             z = Zone(attrs)
@@ -207,6 +241,7 @@ class LineOffsetHandler(ContentHandler):
             l.rend = attrs.get('rend')
             l.hand_attr = attrs.get('hand')
             l.hand = _determine_hand(l.hand_attr)
+            l.in_work = _is_in_work(attrs.get('xml:id'))
             self.zones[-1].lines.append(l)
             self.stack.append(l)
         elif name == "add":
@@ -221,7 +256,7 @@ class LineOffsetHandler(ContentHandler):
         elif name == "addSpan":
             d = Add()
             d.begin = self.pos
-            d.spanTo = attrs.get('spanTo')[1:] # remove hash right away
+            d.spanTo = attrs.get('spanTo').lstrip('#')
             d.rend = attrs.get('rend')
             d.hand_attr = attrs.get('hand')
             d.hand = _determine_hand(d.hand_attr)
@@ -239,7 +274,7 @@ class LineOffsetHandler(ContentHandler):
         elif name == "delSpan":
             d = Delete()
             d.begin = self.pos
-            d.spanTo = attrs.get('spanTo')[1:] # remove hash right away
+            d.spanTo = attrs.get('spanTo').lstrip('#')
             d.rend = attrs.get('rend')
             d.hand_attr = attrs.get('hand')
             d.hand = _determine_hand(d.hand_attr)
@@ -261,6 +296,18 @@ class LineOffsetHandler(ContentHandler):
                 if self.hand_stack[-1] != hand:
                     # set new hand at the top of the stack
                     self.hand_stack[-1] = hand
+        elif name == "milestone":
+            if attrs.get('unit') == 'tei:seg':
+                xmlid = attrs.get('xml:id')
+                work = _is_in_work(xmlid)
+                if work:
+                    s = Segment()
+                    s.begin = self.pos
+                    s.hand_attr = attrs.get('hand')
+                    s.hand = _determine_hand(s.hand_attr)
+                    s.in_work = work
+                    s.spanTo = attrs.get('spanTo').lstrip('#')
+                    self.zones[-1].segments.append(s)
         # Turn vertical spaces into lines
         elif name == "space":
             if attrs.get('dim') == 'vertical':
@@ -282,6 +329,10 @@ class LineOffsetHandler(ContentHandler):
                     spanTo = add.spanTo
                     if spanTo and spanTo == anchor_id:
                         add.end = self.pos
+                for segment in zone.segments:
+                    spanTo = segment.spanTo
+                    if spanTo and spanTo == anchor_id:
+                        segment.end = self.pos
 
     def endElement(self, name):
         if name in ("zone", "line", "add", "del", "hi"):

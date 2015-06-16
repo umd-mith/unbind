@@ -238,7 +238,7 @@ class Manifest(object):
         g = self.g
 
         for zone in surface.zones:
-            # TODO: process adds, deletes and highlights too
+            # TODO: process highlights too
             for line in zone.lines:
                 self._add_text_annotation(line, surface)
             for add in zone.adds:
@@ -247,6 +247,8 @@ class Manifest(object):
                 self._add_text_annotation(delete, surface)
             for space in zone.spaces:
                 self._add_text_annotation(space, surface)
+            for segment in zone.segments:
+                self._add_text_annotation(segment, surface)
 
     def _add_text_annotation(self, a, surface):
         # Skip possible *Span elements that failed to get an end pos
@@ -262,6 +264,8 @@ class Manifest(object):
             ann_type = SGA.AdditionAnnotation
         elif type(a) == tei.Space:
             ann_type = SGA.SpaceAnnotation
+        elif type(a) == tei.Segment:
+            ann_type = SGA.SegmentAnnotation
 
         # link AnnotationList to Annotation
         annotation = BNode()
@@ -279,6 +283,9 @@ class Manifest(object):
                 g.add((annotation, SGA.textAlignment, Literal(a.rend)))
         if ann_type == SGA.SpaceAnnotation:
             g.add((annotation, SGA.spaceExt, Literal(a.ext)))
+        if hasattr(a, 'in_work'):
+            if a.in_work:  # it may be false when present
+                g.add((annotation, SGA.hasClass, Literal(a.in_work)))
    
         # link LineAnnotation to SpecificResource and TEI file
         target = BNode()
