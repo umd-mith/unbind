@@ -283,9 +283,6 @@ class Manifest(object):
                 g.add((annotation, SGA.textAlignment, Literal(a.rend)))
         if ann_type == SGA.SpaceAnnotation:
             g.add((annotation, SGA.spaceExt, Literal(a.ext)))
-        if hasattr(a, 'in_work'):
-            if a.in_work:  # it may be false when present
-                g.add((annotation, SGA.hasClass, Literal(a.in_work)))
    
         # link LineAnnotation to SpecificResource and TEI file
         target = BNode()
@@ -293,8 +290,14 @@ class Manifest(object):
         g.add((target, RDF.type, OA.SpecificResource))
         g.add((target, OA.hasSource, URIRef(self.tei_url(surface))))
 
+        classes = []
+        if hasattr(a, 'in_work'):
+            if a.in_work:  # it may be false when present
+                classes.append('work-' + a.in_work)
         if a.hand:
-            g.add((target, SGA.hasClass, Literal('hand-' + a.hand)))
+            classes.append('hand-' + a.hand)
+        if classes:
+            g.add((target, SGA.hasClass, Literal(" ".join(classes))))
 
         # link SpecificResource and TextOffsetSelector
         selector = BNode()
