@@ -43,10 +43,11 @@ class Document(object):
             title = work.find('./{%(tei)s}bibl/{%(tei)s}title' % ns).text
             title = title.strip()
             for locus in work.findall('.//{%(tei)s}locus' % ns):                
-                targets = re.split(r'\s+', locus.attrib['target'].strip())
-                for target in targets:
-                    target = target.lstrip("#")
-                    self.work_loci[target] = title.lower().replace(' ', '_')
+                if locus.attrib.get('target'):
+                    targets = re.split(r'\s+', locus.attrib.get('target').strip())
+                    for target in targets:
+                        target = target.lstrip("#")
+                        self.work_loci[target] = title.lower().replace(' ', '_')
 
         # load each surface
         self.surfaces = []
@@ -74,6 +75,7 @@ class Surface(object):
         tei = doc.getroot()
         self.height = int(tei.attrib.get('lry'))
         self.width = int(tei.attrib.get('lrx'))
+        self.xmlid = tei.attrib.get('{%s}id' % XML)
         self.folio = tei.attrib.get("{%s}folio" % MITH)
         self.shelfmark = tei.attrib.get("{%s}shelfmark" % MITH)
         self.image = tei.find('.//{%s}graphic' % TEI).get('url')
@@ -94,7 +96,7 @@ class Surface(object):
         # since we need to keep track of text offsets 
 
         parser = make_parser()
-        handler = LineOffsetHandler(document)
+        handler = LineOffsetHandler(document, self)
         parser.setContentHandler(handler)
         parser.parse(tmp_filename)
         self.zones = handler.zones
@@ -202,8 +204,9 @@ class LineOffsetHandler(ContentHandler):
     are added to the zone that they are a part of.
     """
 
-    def __init__(self, document=None):
+    def __init__(self, document=None, surface=None):
         self.document = document
+        self.surface = surface
         self.zones = []
         self.pos = 0
         self.height = None
@@ -227,6 +230,10 @@ class LineOffsetHandler(ContentHandler):
                 xmlid = xmlid.strip()
                 if xmlid in self.document.work_loci.keys():
                     return self.document.work_loci[xmlid]
+            else:
+                s_xmlid = self.surface.xmlid.strip()
+                if s_xmlid in self.document.work_loci.keys():
+                    return self.document.work_loci[s_xmlid]
             return False
 
         if name == "zone":
