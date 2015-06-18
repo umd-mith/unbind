@@ -329,8 +329,8 @@ class Manifest(object):
         if ann_type == SGA.HighlightAnnotation:
             rend_to_css = {
                 # "hyphenated" : None
-                "underline": "text-decoration: underline;",
-                "double-underline": "border-bottom: 3px double;",
+                "underline": "border-bottom: 1px solid; line-height: 1em;",
+                "double-underline": "border-bottom: 3px double; line-height: 1em;",
                 "bold": "font-weight: bold;",
                 "caps": "font-variant: small-caps;",
                 "italic": "font-style: italic;",
