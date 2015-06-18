@@ -94,7 +94,7 @@ class Manifest(object):
         self.g.add((self.uri, RDFS.label, Literal(self.tei.label)))
         self.g.add((self.uri, DC.title, Literal(self.tei.title)))
         self.g.add((self.uri, SC.agentLabel, Literal(self.tei.agent)))
-        self.g.add((self.uri, SC.attributionLabel, Literal(self.tei.agent)))
+        self.g.add((self.uri, SC.attributionLabel, Literal(self.tei.attribution)))
         self.g.add((self.uri, SC.dateLabel, Literal(self.tei.date)))
         self.g.add((self.uri, SGA.stateLabel, Literal(self.tei.state)))
         self.g.add((self.uri, SC.service, URIRef(self.tei.service)))
