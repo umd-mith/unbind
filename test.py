@@ -101,7 +101,7 @@ def test_jsonld():
     assert count_type(jsonld, 'sc:ContentAnnotation') == 90
    
     # css should be there
-    assert count_type(jsonld, 'cnt:ContentAsText') == 49
+    assert count_type(jsonld, 'cnt:ContentAsText') == 61
 
     # parse the json-ld as rdf
     register('json-ld', Parser, 'rdflib_jsonld.parser', 'JsonLDParser')
