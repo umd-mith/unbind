@@ -6,6 +6,7 @@ import sys
 import teizone
 import StringIO
 import tempfile
+import string
 
 from six.moves.urllib.parse import urljoin
 
@@ -47,7 +48,9 @@ class Document(object):
                     targets = re.split(r'\s+', locus.attrib.get('target').strip())
                     for target in targets:
                         target = target.lstrip("#")
-                        self.work_loci[target] = title.lower().replace(' ', '_')
+                        title = title.lower()
+                        title = re.sub(r"["+string.punctuation+r"\s]", "_", title)
+                        self.work_loci[target] = title
 
         # load each surface
         self.surfaces = []
@@ -79,18 +82,15 @@ class Surface(object):
         self.folio = tei.attrib.get("{%s}folio" % MITH)
         self.shelfmark = tei.attrib.get("{%s}shelfmark" % MITH)
         self.image = tei.find('.//{%s}graphic' % TEI).get('url')
-        # Mary Shelley is added by default for now. Need to update TEI.
-        self.hands_label = "Mary Shelley"
+        self.hands_label = ""
 
         # Only attempt to populate Document-dependent 
         # properties when the document object is available
-        if document:         
-            self.hands = []
-            for hand in tei.findall('.//*[@hand]'):
-                h_id = hand.get('hand')[1:]
-                if h_id in document.hands and h_id not in self.hands:
-                    self.hands.append(h_id)
-                    self.hands_label += ", %s" % document.hands[h_id]
+        if document:
+            hands = []
+            for hand in document.hands:
+                hands.append(document.hands[hand])
+            self.hands_label = ", ".join(hands)
         
         # use a SAX parser to get the line annotations
         # since we need to keep track of text offsets 
