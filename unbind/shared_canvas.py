@@ -245,6 +245,8 @@ class Manifest(object):
                 self._add_text_annotation(add, surface)
             for delete in zone.deletes:
                 self._add_text_annotation(delete, surface)
+            for highlight in zone.highlights:
+                self._add_text_annotation(highlight, surface)
             for space in zone.spaces:
                 self._add_text_annotation(space, surface)
             for segment in zone.segments:
@@ -266,6 +268,8 @@ class Manifest(object):
             ann_type = SGA.SpaceAnnotation
         elif type(a) == tei.Segment:
             ann_type = SGA.SegmentAnnotation
+        elif type(a) == tei.Highlight:
+            ann_type = SGA.HighlightAnnotation
 
         # link AnnotationList to Annotation
         annotation = BNode()
@@ -320,6 +324,26 @@ class Manifest(object):
                 g.add((css, RDF.type, CNT.ContentAsText))
                 g.add((css, DC['format'], Literal("text/css")))
                 g.add((css, CNT.chars, Literal(text)))
+
+        # Add literal CSS
+        if ann_type == SGA.HighlightAnnotation:
+            rend_to_css = {
+                # "hyphenated" : None
+                "underline": "text-decoration: underline;",
+                "double-underline": "border-bottom: 3px double;",
+                "bold": "font-weight: bold;",
+                "caps": "font-variant: small-caps;",
+                "italic": "font-style: italic;",
+                "sup": "vertical-align: super; font-size: 80%",
+                "sub": "vertical-align: sub; font-size: 80%"
+            }
+            value = rend_to_css.get(a.rend)
+            if value:
+                css = BNode()
+                g.add((target, OA.hasStyle, css))
+                g.add((css, RDF.type, CNT.ContentAsText))
+                g.add((css, DC['format'], Literal("text/css")))
+                g.add((css, CNT.chars, Literal(value)))
 
     def _add_html_annotations(self, surface, canvas_uri):
         ann = BNode()
