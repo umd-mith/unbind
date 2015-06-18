@@ -226,14 +226,16 @@ class LineOffsetHandler(ContentHandler):
             return self.hand_stack[-1]
 
         def _is_in_work(xmlid):
-            if xmlid:
-                xmlid = xmlid.strip()
-                if xmlid in self.document.work_loci.keys():
-                    return self.document.work_loci[xmlid]
-            else:
-                s_xmlid = self.surface.xmlid.strip()
-                if s_xmlid in self.document.work_loci.keys():
-                    return self.document.work_loci[s_xmlid]
+            # only proceed if document metadata does exist
+            if self.document:
+                if xmlid:
+                    xmlid = xmlid.strip()
+                    if xmlid in self.document.work_loci.keys():
+                        return self.document.work_loci[xmlid]
+                else:
+                    s_xmlid = self.surface.xmlid.strip()
+                    if s_xmlid in self.document.work_loci.keys():
+                        return self.document.work_loci[s_xmlid]
             return False
 
         if name == "zone":
