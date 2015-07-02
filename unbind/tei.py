@@ -8,6 +8,8 @@ import StringIO
 import tempfile
 import string
 
+from collections import OrderedDict
+
 from six.moves.urllib.parse import urljoin
 
 from xml.sax import make_parser
@@ -67,7 +69,7 @@ class Document(object):
 
         # load each surface
         self.surfaces = []
-        self.ranges = {}
+        self.ranges = OrderedDict()
         for inc in tei.findall('.//{%(tei)s}sourceDoc/{%(xi)s}include' % ns):
             filename = urljoin(tei_filename, inc.attrib['href'])
             surface = Surface(filename, self)
