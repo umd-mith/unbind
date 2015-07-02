@@ -38,22 +38,36 @@ class Document(object):
         for hand in tei.findall('.//{%(tei)s}physDesc//{%(tei)s}handNote[@{%(xml)s}id]' % ns):
             self.hands[hand.get('{%(xml)s}id' % ns)] = hand.findall('{%(tei)s}persName' % ns)[0].text
 
-        # get all loci to locate works scattered across pages
+        # get all loci to locate works scattered across pages.
+        # Also structure them by section for sc:ranges.
         self.work_loci = {}
+        self.section_loci = {}
+        allowed_sections = ["chapter", "scene"]
         for work in tei.findall('.//{%(tei)s}msItem[@class="#work"]' % ns):
-            title = work.find('./{%(tei)s}bibl/{%(tei)s}title' % ns).text
-            title = title.strip()
-            for locus in work.findall('.//{%(tei)s}locus' % ns):                
-                if locus.attrib.get('target'):
-                    targets = re.split(r'\s+', locus.attrib.get('target').strip())
-                    for target in targets:
-                        target = target.lstrip("#")
-                        title = title.lower()
-                        title = re.sub(r"["+string.punctuation+r"\s]", "_", title)
-                        self.work_loci[target] = title
+            w_title = work.find('./{%(tei)s}bibl/{%(tei)s}title' % ns).text
+            w_title = w_title.strip()
+            sections = []
+            for s in allowed_sections:
+                sections += work.findall('.//{%s}msItem[@class="#%s"]' % (ns['tei'], s))
+            # If there are no subsections, set the context back to work
+            if not sections:
+                sections = [work]
+            for section in sections:
+                s_title = section.find('./{%(tei)s}bibl/{%(tei)s}title' % ns).text
+                s_title = s_title.strip()
+                for locus in section.findall('.//{%(tei)s}locus' % ns):
+                    if locus.attrib.get('target'):
+                        targets = re.split(r'\s+', locus.attrib.get('target').strip())
+                        for target in targets:
+                            target = target.lstrip("#")
+                            w_title = w_title.lower()
+                            w_title = re.sub(r"["+string.punctuation+r"\s]", "_", w_title)
+                            self.work_loci[target] = w_title
+                            self.section_loci[target] = s_title
 
         # load each surface
         self.surfaces = []
+        self.ranges = {}
         for inc in tei.findall('.//{%(tei)s}sourceDoc/{%(xi)s}include' % ns):
             filename = urljoin(tei_filename, inc.attrib['href'])
             surface = Surface(filename, self)
@@ -92,6 +106,13 @@ class Surface(object):
                 hands.append(document.hands[hand])
             self.hands_label = ", ".join(hands)
         
+        # Determine if this surface is in a range
+        if self.xmlid in document.section_loci:
+            title = document.section_loci[self.xmlid]
+            if not document.ranges.get(title):
+                document.ranges[title] = set()
+            document.ranges[title].add(self.xmlid)
+
         # use a SAX parser to get the line annotations
         # since we need to keep track of text offsets 
 
@@ -238,6 +259,20 @@ class LineOffsetHandler(ContentHandler):
                         return self.document.work_loci[s_xmlid]
             return False
 
+        def _add_to_range(xmlid):
+            """ Determine if id is part of a section and if yes add its 
+                surface id to the document's ranges """
+            # only proceed if document metadata does exist
+            if self.document and self.surface:
+                if xmlid:
+                    xmlid = xmlid.strip()
+                    if xmlid in self.document.section_loci.keys():
+                        title = self.document.section_loci[xmlid]
+                        surface_id = self.surface.xmlid
+                        if not self.document.ranges.get(title):
+                            self.document.ranges[title] = set()
+                        self.document.ranges[title].add(surface_id)
+
         if name == "zone":
             z = Zone(attrs)
             z.begin = self.pos
@@ -251,6 +286,7 @@ class LineOffsetHandler(ContentHandler):
             l.hand_attr = attrs.get('hand')
             l.hand = _determine_hand(l.hand_attr)
             l.in_work = _is_in_work(attrs.get('xml:id'))
+            _add_to_range(attrs.get('xml:id'))
             self.zones[-1].lines.append(l)
             self.stack.append(l)
         elif name == "add":
@@ -309,6 +345,7 @@ class LineOffsetHandler(ContentHandler):
             if attrs.get('unit') == 'tei:seg':
                 xmlid = attrs.get('xml:id')
                 work = _is_in_work(xmlid)
+                _add_to_range(attrs.get('xml:id'))
                 if work:
                     s = Segment()
                     s.begin = self.pos
