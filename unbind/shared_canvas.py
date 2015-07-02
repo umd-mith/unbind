@@ -15,7 +15,7 @@ from .namespaces import DC, OA, OAX, ORE, SC, SGA, TEI, EXIF, CNT
 
 class Manifest(object):
 
-    def __init__(self, tei_filename, manifest_uri, page=None):
+    def __init__(self, tei_filename, manifest_uri, page=None, skip_annos=False):
         """
         Create a Shared Canvas manifest using the path to a given TEI file 
         and the URI where the manifest will be published. 
@@ -24,6 +24,8 @@ class Manifest(object):
         
         Optionally pass in a page number if you are debugging and want 
         to limit the manifest to a specific page.
+
+        Optionally set the skip_annos parameter to true to skip text annotations.
         """
 
         g = self.g = ConjunctiveGraph()
@@ -61,7 +63,7 @@ class Manifest(object):
         g.add((xa, SC.forMotivation, SGA.source))
         g.add((xa, RDFS.label, Literal("TEI source")))
 
-        self._build(page)
+        self._build(page, skip_annos)
 
     def jsonld(self, indent=2):
         # somewhat inefficient since we are serializing the json
@@ -89,7 +91,7 @@ class Manifest(object):
         html_url = html_url.replace('.xml', '.html')
         return html_url
 
-    def _build(self, page=None):
+    def _build(self, page=None, skip_annos=None):
         self.g.add((self.uri, RDF.type, SC.Manifest))
         self.g.add((self.uri, RDFS.label, Literal(self.tei.label)))
         self.g.add((self.uri, DC.title, Literal(self.tei.title)))
@@ -98,9 +100,9 @@ class Manifest(object):
         self.g.add((self.uri, SC.dateLabel, Literal(self.tei.date)))
         self.g.add((self.uri, SGA.stateLabel, Literal(self.tei.state)))
         self.g.add((self.uri, SC.service, URIRef(self.tei.service)))
-        self._add_canvases(page)
+        self._add_canvases(page, skip_annos)
 
-    def _add_canvases(self, page=None):
+    def _add_canvases(self, page=None, skip_annos=None):
         g = self.g
 
         # add the list of sequences
@@ -173,17 +175,19 @@ class Manifest(object):
             g.add((sequence_uri, RDF.rest, next_sequence_uri))
             sequence_uri = next_sequence_uri
 
-            # add the zone annotations
-            self._add_zone_annotations(surface, canvas_uri)
+            # Skip lower-level annotations when requested
+            if not skip_annos:
+                # add the zone annotations
+                self._add_zone_annotations(surface, canvas_uri)
 
-            # add the line annotations
-            self._add_text_annotations(surface)
+                # add the line annotations
+                self._add_text_annotations(surface)
 
-            # add the html annotations
-            self._add_html_annotations(surface, canvas_uri)
+                # add the html annotations
+                self._add_html_annotations(surface, canvas_uri)
 
-            # add the xml annotations
-            self._add_xml_annotations(surface, canvas_uri)
+                # add the xml annotations
+                self._add_xml_annotations(surface, canvas_uri)
 
         # close off the sequence list
         g.add((sequence_uri, RDF.rest, RDF.nil))
