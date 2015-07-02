@@ -119,6 +119,21 @@ class Manifest(object):
         g.add((sequence_uri, RDF.rest, RDF.nil))
         g.add((sequence_uri, RDFS.label, Literal("Physical sequence")))
 
+        # add the list of ranges
+        ranges_uri = BNode()
+        g.add((self.uri, SC.hasRanges, ranges_uri))
+        g.add((ranges_uri, RDF.type, RDF.List))
+
+        # add each range, which itself is list of canvases
+        for ran in self.tei.ranges:
+            range_uri = BNode()
+            g.add((ranges_uri, RDF.first, range_uri))
+            g.add((ranges_uri, RDF.rest, RDF.nil))
+            g.add((range_uri, RDF.type, SC.Range))
+            g.add((range_uri, RDF.type, RDF.List))
+            g.add((range_uri, RDF.rest, RDF.nil))
+            g.add((range_uri, RDFS.label, Literal(ran)))
+
         # add the image list
         image_list_uri = BNode()
         g.add((self.uri, SC.hasImageAnnotations, image_list_uri))
