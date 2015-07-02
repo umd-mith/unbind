@@ -120,19 +120,23 @@ class Manifest(object):
         g.add((sequence_uri, RDFS.label, Literal("Physical sequence")))
 
         # add the list of ranges
-        ranges_uri = BNode()
-        g.add((self.uri, SC.hasRanges, ranges_uri))
-        g.add((ranges_uri, RDF.type, RDF.List))
+        range_list_uri = BNode()
+        g.add((self.uri, SC.hasRanges, range_list_uri))
+        g.add((range_list_uri, RDF.type, RDF.List))
 
         # add each range, which itself is list of canvases
+        ranges_used = {}
         for ran in self.tei.ranges:
             range_uri = BNode()
-            g.add((ranges_uri, RDF.first, range_uri))
-            g.add((ranges_uri, RDF.rest, RDF.nil))
+            ranges_used[ran] = range_uri
+            g.add((range_list_uri, RDF.first, range_uri))
             g.add((range_uri, RDF.type, SC.Range))
             g.add((range_uri, RDF.type, RDF.List))
-            g.add((range_uri, RDF.rest, RDF.nil))
             g.add((range_uri, RDFS.label, Literal(ran)))
+            next_range_list_uri = BNode()
+            g.add((range_list_uri, RDF.rest, next_range_list_uri))
+            range_list_uri = next_range_list_uri
+        g.add((range_list_uri, RDF.rest, RDF.nil))
 
         # add the image list
         image_list_uri = BNode()
@@ -204,10 +208,22 @@ class Manifest(object):
                 # add the xml annotations
                 self._add_xml_annotations(surface, canvas_uri)
 
+            range_label = self.tei.section_loci.get(surface.xmlid, None)
+            if range_label:
+                range_uri = ranges_used[range_label]
+                g.add((range_uri, RDF.first, canvas_uri))
+                new_range_uri = BNode()
+                g.add((range_uri, RDF.rest, new_range_uri))
+                ranges_used[range_label] = new_range_uri
+
         # close off the sequence list
         g.add((sequence_uri, RDF.rest, RDF.nil))
         g.add((image_list_uri, RDF.rest, RDF.nil))
         g.add((canvas_list_uri, RDF.rest, RDF.nil))
+
+        # close off the ranges lists
+        for range_uri in ranges_used.values():
+            g.add((range_uri, RDF.rest, RDF.nil))
 
     def _add_zone_annotations(self, surface, canvas):
         g = self.g
