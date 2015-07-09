@@ -26,7 +26,24 @@ class Document(object):
         tei = etree.parse(tei_filename).getroot()
 
         # extract some document level metadata
-        page_sequence = re.sub(r'[_-]', '/', tei.get('{%(xml)s}id' % ns))
+        preserve_titles = ["ms_shelley", 
+                           "prometheus_unbound", 
+                           "misery_e2_frag",
+                           "ode_to_heaven"]
+
+        tei_id = tei.get('{%(xml)s}id' % ns)
+        esc_title_id = tei_id
+
+        for i, title in enumerate(preserve_titles):
+            esc_title_id = esc_title_id.replace(title, '{#title'+str(i)+"#}")
+
+        esc_title_id = re.sub(r'[-_]', '/', esc_title_id)
+
+        page_sequence = re.sub(
+                            r'\{#title(\d+)#\}',
+                            lambda m: preserve_titles[int(m.group(1))],
+                            esc_title_id)
+        page_sequence = page_sequence.replace("ox/", "oxford/")
         self.title = tei.find('.//{%(tei)s}msItem[@class="#work"][0]/{%(tei)s}bibl/{%(tei)s}title' % ns).text
         self.agent = tei.find('.//{%(tei)s}msItem[@class="#work"][0]/{%(tei)s}bibl/{%(tei)s}author' % ns).text
         self.attribution = tei.find('.//{%(tei)s}repository' % ns).text
