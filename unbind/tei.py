@@ -39,6 +39,8 @@ class Document(object):
         self.hands = {}
         for hand in tei.findall('.//{%(tei)s}physDesc//{%(tei)s}handNote[@{%(xml)s}id]' % ns):
             self.hands[hand.get('{%(xml)s}id' % ns)] = hand.findall('{%(tei)s}persName' % ns)[0].text
+            if hand.get('scope') == 'major' or hand.get('scope') == 'sole':
+                self.main_hand = hand.get('{%(xml)s}id' % ns)
 
         # get all loci to locate works scattered across pages.
         # Also structure them by section for sc:ranges.
@@ -234,7 +236,7 @@ class LineOffsetHandler(ContentHandler):
         self.pos = 0
         self.height = None
         self.width = None
-        self.hand_stack = ["mws"] # We must assume mws as default. This needs to be fixed in the TEI.
+        self.hand_stack = [document.main_hand]
         self.work_stack = []
         self.stack = []
 
@@ -390,7 +392,7 @@ class LineOffsetHandler(ContentHandler):
             if name != "zone":
                 hand = e.hand_attr
                 if hand and hand[0]=="#": hand = hand[1:]
-                # make sure to keep "mws" at the bottom of the hand stack
+                # make sure to keep default hand at the bottom of the hand stack
                 if len(self.hand_stack) > 1 and hand == self.hand_stack[-1]:
                     self.hand_stack.pop()
    
