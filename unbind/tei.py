@@ -44,10 +44,22 @@ class Document(object):
                             lambda m: preserve_titles[int(m.group(1))],
                             esc_title_id)
         page_sequence = page_sequence.replace("ox/", "oxford/")
-        self.title = tei.find('.//{%(tei)s}msItem[@class="#work"][0]/{%(tei)s}bibl/{%(tei)s}title' % ns).text
+        # To determine the manifest title, get the first work title.
+        # If there are more than one work, add: "and others".
+        works = tei.findall('.//{%(tei)s}msItem[@class="#work"]/{%(tei)s}bibl/{%(tei)s}title' % ns)        
+        self.title = works[0].text
+        if len(works) > 1:
+            self.title += " and others"
         self.agent = tei.find('.//{%(tei)s}msItem[@class="#work"][0]/{%(tei)s}bibl/{%(tei)s}author' % ns).text
         self.attribution = tei.find('.//{%(tei)s}repository' % ns).text
-        self.date = tei.find('.//{%(tei)s}msItem/{%(tei)s}bibl/{%(tei)s}date' % ns).text
+        # To determine the date, first look at the manuscript's history. 
+        # Otherwise use the work's metadata.
+        ms_date = tei.find('.//{%(tei)s}history/{%(tei)s}origin' % ns)
+        main_work_date = tei.find('.//{%(tei)s}msItem/{%(tei)s}bibl/{%(tei)s}date' % ns)
+        if ms_date is not None:
+            self.date = ms_date.text
+        else:
+            self.date = main_work_date.text
         self.service = "http://shelleygodwinarchive.org/sc/%s" % page_sequence
         self.state = tei.find('.//{%(tei)s}msItem[@class="#work"]/{%(tei)s}bibl' % ns).get("status").replace("_", " ")
         self.label = tei.find('.//{%(tei)s}titleStmt/{%(tei)s}title[@type="main"]' % ns).text
