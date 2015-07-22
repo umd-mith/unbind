@@ -75,6 +75,12 @@ class Manifest(object):
         # errors into the graph.
         j = self.g.serialize(format='json-ld')
         j = json.loads(j)
+        # Before returning, add information about works.
+        # This is a hack until we move to IIIF
+        for node in j:
+            if node["@id"] == str(self.uri):
+                node["sga:containedWorks"] = self.tei.works
+
         j = pyld.jsonld.compact(j, self._context())
         return j
 

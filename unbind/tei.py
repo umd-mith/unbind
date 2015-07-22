@@ -28,7 +28,6 @@ class Document(object):
         # extract some document level metadata
         preserve_titles = ["ms_shelley", 
                            "prometheus_unbound", 
-                           "misery_e2_frag",
                            "ode_to_heaven"]
 
         tei_id = tei.get('{%(xml)s}id' % ns)
@@ -60,7 +59,7 @@ class Document(object):
             self.date = ms_date.text
         else:
             self.date = main_work_date.text
-        self.service = "http://shelleygodwinarchive.org/sc/%s" % page_sequence
+        self.service = "http://54.166.84.180/sc/%s" % page_sequence
         self.state = tei.find('.//{%(tei)s}msItem[@class="#work"]/{%(tei)s}bibl' % ns).get("status").replace("_", " ")
         self.label = tei.find('.//{%(tei)s}titleStmt/{%(tei)s}title[@type="main"]' % ns).text
 
@@ -75,10 +74,12 @@ class Document(object):
         # Also structure them by section for sc:ranges.
         self.work_loci = {}
         self.section_loci = {}
+        self.works = []
         allowed_sections = ["chapter", "scene"]
         for work in tei.findall('.//{%(tei)s}msItem[@class="#work"]' % ns):
             w_title = work.find('./{%(tei)s}bibl/{%(tei)s}title' % ns).text
             w_title = w_title.strip()
+            self.works.append(w_title)
             sections = []
             for s in allowed_sections:
                 sections += work.findall('.//{%s}msItem[@class="#%s"]' % (ns['tei'], s))
