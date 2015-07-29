@@ -59,7 +59,7 @@ class Document(object):
             self.date = ms_date.text
         else:
             self.date = main_work_date.text
-        self.service = "http://54.166.84.180/sc/%s" % page_sequence
+        self.service = "http://shelleygodwinarchive.org/sc/%s" % page_sequence
         self.state = tei.find('.//{%(tei)s}msItem[@class="#work"]/{%(tei)s}bibl' % ns).get("status").replace("_", " ")
         self.label = tei.find('.//{%(tei)s}titleStmt/{%(tei)s}title[@type="main"]' % ns).text
 

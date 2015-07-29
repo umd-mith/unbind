@@ -92,7 +92,7 @@ class Manifest(object):
     def html_url(self, surface):
         # a hack until we've got a better way of coordinating the deployment
         # of the xml, html and images
-        html_url = 'http://54.166.84.180/tei/readingTEI/html'
+        html_url = 'http://shelleygodwinarchive.com/tei/readingTEI/html'
         html_url += surface.relative_path.replace('/data/tei/ox', '')
         html_url = html_url.replace('.xml', '.html')
         return html_url
