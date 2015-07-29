@@ -140,12 +140,12 @@ class Surface(object):
                 hands.append(document.hands[hand])
             self.hands_label = ", ".join(hands)
         
-        # Determine if this surface is in a range
-        if self.xmlid in document.section_loci:
-            title = document.section_loci[self.xmlid]
-            if not document.ranges.get(title):
-                document.ranges[title] = set()
-            document.ranges[title].add(self.xmlid)
+            # Determine if this surface is in a range
+            if self.xmlid in document.section_loci:
+                title = document.section_loci[self.xmlid]
+                if not document.ranges.get(title):
+                    document.ranges[title] = set()
+                document.ranges[title].add(self.xmlid)
 
         # use a SAX parser to get the line annotations
         # since we need to keep track of text offsets 
@@ -266,7 +266,10 @@ class LineOffsetHandler(ContentHandler):
         self.pos = 0
         self.height = None
         self.width = None
-        self.hand_stack = [document.main_hand]
+        if document:
+            self.hand_stack = [document.main_hand]
+        else:
+            self.hand_stack = ["default"]
         self.work_stack = []
         self.stack = []
 
