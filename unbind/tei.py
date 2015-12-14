@@ -26,7 +26,8 @@ class Document(object):
         tei = etree.parse(tei_filename).getroot()
 
         # extract some document level metadata
-        preserve_titles = ["ms_shelley", 
+        preserve_titles = ["ms_abinger",
+                           "ms_shelley", 
                            "prometheus_unbound", 
                            "ode_to_heaven"]
 
