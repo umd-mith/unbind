@@ -1,5 +1,6 @@
 sga="/home/rviglian/Projects/sga"
-ids=(ox-frankenstein_notebook_a ox-frankenstein_notebook_b ox-frankenstein_notebook_c1 ox-frankenstein_notebook_c2 \
+ids=(ox-ms_abinger_c56 ox-ms_abinger_c57 ox-ms_abinger_c58 \ 
+        ox-frankenstein_notebook_a ox-frankenstein_notebook_b ox-frankenstein_notebook_c1 ox-frankenstein_notebook_c2 \
 	ox-frankenstein-volume_i ox-frankenstein-volume_ii ox-frankenstein-volume_iii \
 	ox-ms_shelley_e1 ox-ms_shelley_e2 ox-ms_shelley_e3 \ 
 	ox-prometheus_unbound-act_i ox-prometheus_unbound-act_ii ox-prometheus_unbound-act_iii ox-prometheus_unbound-act_iv \
