@@ -1,3 +1,4 @@
+#!/bin/bash
 sga="/home/rviglian/Projects/sga"
 ids=(ox-ms_abinger_c56 ox-ms_abinger_c57 ox-ms_abinger_c58 \ 
         ox-frankenstein_notebook_a ox-frankenstein_notebook_b ox-frankenstein_notebook_c1 ox-frankenstein_notebook_c2 \
