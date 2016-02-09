@@ -313,7 +313,8 @@ class LineOffsetHandler(ContentHandler):
                             self.document.ranges[title] = set()
                         self.document.ranges[title].add(surface_id)
                         # Update list of section_loci_pages_only
-                        self.document.section_loci_pages_only[surface_id] = self.document.section_loci_pages_only.pop(xmlid)
+                        if self.document.section_loci_pages_only.get(xmlid, None):
+                            self.document.section_loci_pages_only[surface_id] = self.document.section_loci_pages_only.pop(xmlid)
 
         if name == "zone":
             z = Zone(attrs)
