@@ -54,6 +54,7 @@ class Document(object):
             self.title = work_parts[0].text
             classDecl = "#work_part"
         else:
+            self.title = works[0].text
             classDecl = "#work"
             if len(works) > 1:
                 self.title += " and others"
