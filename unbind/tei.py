@@ -9,6 +9,7 @@ import tempfile
 import string
 
 from collections import OrderedDict
+from copy import copy
 
 from six.moves.urllib.parse import urljoin
 
@@ -46,11 +47,20 @@ class Document(object):
         page_sequence = page_sequence.replace("ox/", "oxford/")
         # To determine the manifest title, get the first work title.
         # If there are more than one work, add: "and others".
-        works = tei.findall('.//{%(tei)s}msItem[@class="#work"]/{%(tei)s}bibl/{%(tei)s}title' % ns)        
-        self.title = works[0].text
-        if len(works) > 1:
-            self.title += " and others"
-        self.agent = tei.find('.//{%(tei)s}msItem[@class="#work"][0]/{%(tei)s}bibl/{%(tei)s}author' % ns).text
+        classDecl = ""
+        works = tei.findall('.//{%(tei)s}msItem[@class="#work"]/{%(tei)s}bibl/{%(tei)s}title' % ns)
+        if not works:
+            work_parts = tei.findall('.//{%(tei)s}msItem[@class="#work_part"]/{%(tei)s}bibl/{%(tei)s}title' % ns)
+            self.title = work_parts[0].text
+            classDecl = "#work_part"
+        else:
+            classDecl = "#work"
+            if len(works) > 1:
+                self.title += " and others"
+
+        xpath_params = copy(ns)
+        xpath_params["cd"] = classDecl
+        self.agent = tei.find('.//{%(tei)s}msItem[@class="%(cd)s"][0]/{%(tei)s}bibl/{%(tei)s}author' % xpath_params).text
         self.attribution = tei.find('.//{%(tei)s}repository' % ns).text
         # To determine the date, first look at the manuscript's history. 
         # Otherwise use the work's metadata.
@@ -61,7 +71,7 @@ class Document(object):
         else:
             self.date = main_work_date.text
         self.service = "http://shelleygodwinarchive.org/sc/%s" % page_sequence
-        self.state = tei.find('.//{%(tei)s}msItem[@class="#work"]/{%(tei)s}bibl' % ns).get("status").replace("_", " ")
+        self.state = tei.find('.//{%(tei)s}msItem[@class="%(cd)s"]/{%(tei)s}bibl' % xpath_params).get("status").replace("_", " ")
         self.label = tei.find('.//{%(tei)s}titleStmt/{%(tei)s}title[@type="main"]' % ns).text
 
         # get the hands that are used
@@ -78,7 +88,7 @@ class Document(object):
         self.section_loci_pages_only = {}
         self.works = []
         allowed_sections = ["chapter", "scene"]
-        for work in tei.findall('.//{%(tei)s}msItem[@class="#work"]' % ns):
+        for work in tei.findall('.//{%(tei)s}msItem[@class="%(cd)s"]' % xpath_params):
             w_title = work.find('./{%(tei)s}bibl/{%(tei)s}title' % ns).text
             w_title = w_title.strip()
             self.works.append(w_title)
