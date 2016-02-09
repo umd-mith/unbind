@@ -214,7 +214,7 @@ class Manifest(object):
                 # add the xml annotations
                 self._add_xml_annotations(surface, canvas_uri)
 
-            range_label = self.tei.section_loci.get(surface.xmlid, None)
+            range_label = self.tei.section_loci_pages_only.get(surface.xmlid, None)
             if range_label:
                 range_uri = ranges_used[range_label]
                 g.add((range_uri, RDF.first, canvas_uri))

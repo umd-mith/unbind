@@ -75,6 +75,7 @@ class Document(object):
         # Also structure them by section for sc:ranges.
         self.work_loci = {}
         self.section_loci = {}
+        self.section_loci_pages_only = {}
         self.works = []
         allowed_sections = ["chapter", "scene"]
         for work in tei.findall('.//{%(tei)s}msItem[@class="#work"]' % ns):
@@ -99,6 +100,7 @@ class Document(object):
                             w_title = re.sub(r"["+string.punctuation+r"\s]", "_", w_title)
                             self.work_loci[target] = w_title
                             self.section_loci[target] = s_title
+                            self.section_loci_pages_only[target] = s_title
 
         # load each surface
         self.surfaces = []
@@ -310,6 +312,8 @@ class LineOffsetHandler(ContentHandler):
                         if not self.document.ranges.get(title):
                             self.document.ranges[title] = set()
                         self.document.ranges[title].add(surface_id)
+                        # Update list of section_loci_pages_only
+                        self.document.section_loci_pages_only[surface_id] = self.document.section_loci_pages_only.pop(xmlid)
 
         if name == "zone":
             z = Zone(attrs)
