@@ -182,7 +182,7 @@ class Manifest(object):
             g.add((image_uri, DC['format'], Literal('image/jp2')))
             g.add((image_uri, EXIF.height, Literal(surface.height)))
             g.add((image_uri, EXIF.width, Literal(surface.width)))
-            g.add((image_uri, SC.hasRelatedService, URIRef("http://shelleygodwinarchive.org/adore-djatoka/resolver")))
+            g.add((image_uri, SC.hasRelatedService, URIRef("http://digital.bodleian.ox.ac.uk/fcgi-bin/iipsrv.fcgi?IIIF=/data/images/delivery/jp2s/shelleygodwin/")))
 
             # add the image annotation
             image_ann_uri = BNode()
