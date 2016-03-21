@@ -327,6 +327,14 @@ class LineOffsetHandler(ContentHandler):
                         if self.document.section_loci_pages_only.get(xmlid, None):
                             self.document.section_loci_pages_only[surface_id] = self.document.section_loci_pages_only.pop(xmlid)
 
+        def _pop_hand(e):
+            # pop hand from stack if defined at add level
+            hand = e.hand_attr
+            if hand and hand[0]=="#": hand = hand[1:]
+            # make sure to keep default hand at the bottom of the hand stack
+            if len(self.hand_stack) > 1 and hand == self.hand_stack[-1]:
+                self.hand_stack.pop()
+
         if name == "zone":
             z = Zone(attrs)
             z.begin = self.pos
@@ -425,14 +433,17 @@ class LineOffsetHandler(ContentHandler):
                     spanTo = delete.spanTo
                     if spanTo and spanTo == anchor_id:
                         delete.end = self.pos
+                        _pop_hand(delete)
                 for add in zone.adds:
                     spanTo = add.spanTo
                     if spanTo and spanTo == anchor_id:
                         add.end = self.pos
+                        _pop_hand(add)
                 for segment in zone.segments:
                     spanTo = segment.spanTo
                     if spanTo and spanTo == anchor_id:
                         segment.end = self.pos
+                        _pop_hand(segment)
 
     def endElement(self, name):
         if name in ("zone", "line", "add", "del", "hi"):
