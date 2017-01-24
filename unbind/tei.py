@@ -30,7 +30,12 @@ class Document(object):
         preserve_titles = ["ms_abinger",
                            "ms_shelley", 
                            "prometheus_unbound", 
-                           "ode_to_heaven"]
+                           "ode_to_heaven",
+                           "loan_ms_70_08",
+                           "mont_blanc",
+                           "hymn_to_intellectual_beauty",
+                           "to_laughter",
+                           "upon_the_wandering_winds"]
 
         tei_id = tei.get('{%(xml)s}id' % ns)
         esc_title_id = tei_id
@@ -44,6 +49,7 @@ class Document(object):
                             r'\{#title(\d+)#\}',
                             lambda m: preserve_titles[int(m.group(1))],
                             esc_title_id)
+
         page_sequence = page_sequence.replace("ox/", "oxford/")
         # To determine the manifest title, get the first work title.
         # If there are more than one work, add: "and others".
