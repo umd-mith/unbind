@@ -35,7 +35,9 @@ class Document(object):
                            "mont_blanc",
                            "hymn_to_intellectual_beauty",
                            "to_laughter",
-                           "upon_the_wandering_winds"]
+                           "upon_the_wandering_winds",
+                           "hm_2177",
+                           "to_william"]
 
         tei_id = tei.get('{%(xml)s}id' % ns)
         esc_title_id = tei_id
