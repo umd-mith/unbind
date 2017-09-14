@@ -18,11 +18,11 @@ class PyTest(Command):
         sys.exit(errno)
 
 setup(
-    name = 'unbound',
+    name = 'unbind',
     version = '0.0.1',
     author = 'Ed Summers',
     author_email = 'ehs@pobox.com',
-    py_modules = ['unbind'],
+    packages = ['unbind'],
     scripts = ['bin/unbind'],
     description = 'Write SGA TEI as SharedCanvas',
     cmdclass = {'test': PyTest},
