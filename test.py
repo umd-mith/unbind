@@ -25,7 +25,7 @@ def test_surface():
     assert s.height == 6660
     assert s.shelfmark == "MS. Abinger c. 58"
     assert s.folio == "1r"
-    assert s.image == "http://shelleygodwinarchive.org/images/ox/ox-ms_abinger_c58-0001.jp2"
+    assert s.image == "http://shelleygodwinarchive.org/images/ox/ms_abinger_c58/ms_abinger_c58-0001.jp2"
 
     assert len(s.zones) == 3
     z = s.zones[2]
