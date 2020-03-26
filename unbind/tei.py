@@ -151,6 +151,14 @@ class Surface(object):
 
         doc = surface.doc
         tei = doc.getroot()
+
+        # Hack to avoid changing teizone: if this is abinger d 33, change coords of pagination
+        if "ox-ms_abinger_d33" in filename:
+            pag = tei.find('./{%s}zone[@type="pagination"]' % TEI)
+            if pag is not None:
+                pag.set('ulx', '150')
+                surface.save(tmp_filename)
+
         self.height = int(tei.attrib.get('lry'))
         self.width = int(tei.attrib.get('lrx'))
         self.xmlid = tei.attrib.get('{%s}id' % XML)
