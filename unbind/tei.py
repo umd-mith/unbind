@@ -28,8 +28,8 @@ class Document(object):
 
         # extract some document level metadata
         preserve_titles = ["ms_abinger",
-                           "ms_shelley", 
-                           "prometheus_unbound", 
+                           "ms_shelley",
+                           "prometheus_unbound",
                            "ode_to_heaven",
                            "loan_ms_70_08",
                            "mont_blanc",
@@ -37,7 +37,8 @@ class Document(object):
                            "to_laughter",
                            "upon_the_wandering_winds",
                            "hm_2177",
-                           "to_william"]
+                           "to_william",
+                           "msl_1876_forster"]
 
         tei_id = tei.get('{%(xml)s}id' % ns)
         esc_title_id = tei_id
@@ -71,7 +72,7 @@ class Document(object):
         xpath_params["cd"] = classDecl
         self.agent = tei.find('.//{%(tei)s}msItem[@class="%(cd)s"][0]/{%(tei)s}bibl/{%(tei)s}author' % xpath_params).text
         self.attribution = tei.find('.//{%(tei)s}repository' % ns).text
-        # To determine the date, first look at the manuscript's history. 
+        # To determine the date, first look at the manuscript's history.
         # Otherwise use the work's metadata.
         ms_date = tei.find('.//{%(tei)s}history/{%(tei)s}origin' % ns)
         main_work_date = tei.find('.//{%(tei)s}msItem/{%(tei)s}bibl/{%(tei)s}date' % ns)
@@ -80,7 +81,11 @@ class Document(object):
         else:
             self.date = main_work_date.text
         self.service = "http://shelleygodwinarchive.org/sc/%s" % page_sequence
-        self.state = tei.find('.//{%(tei)s}msItem[@class="%(cd)s"]/{%(tei)s}bibl' % xpath_params).get("status").replace("_", " ")
+        state = tei.find('.//{%(tei)s}msItem[@class="%(cd)s"]/{%(tei)s}bibl' % xpath_params)
+        if 'status' in state.attrib:
+            self.state = state.get("status").replace("_", " ")
+        else:
+            self.state = "none"
         self.label = tei.find('.//{%(tei)s}titleStmt/{%(tei)s}title[@type="main"]' % ns).text
 
         # get the hands that are used
@@ -135,8 +140,8 @@ class Surface(object):
     def __init__(self, filename, document=None):
         self.filename = filename
 
-        # TODO: at some point we should write the canonical coordinates to the 
-        # TEI. For now it is being done dynamically with zoner, saved to a 
+        # TODO: at some point we should write the canonical coordinates to the
+        # TEI. For now it is being done dynamically with zoner, saved to a
         # temporary file, which we then parse with a SAX Parser,
 
         surface = teizone.Surface(filename)
@@ -151,17 +156,20 @@ class Surface(object):
         self.xmlid = tei.attrib.get('{%s}id' % XML)
         self.folio = tei.attrib.get("{%s}folio" % MITH)
         self.shelfmark = tei.attrib.get("{%s}shelfmark" % MITH)
-        self.image = tei.find('.//{%s}graphic' % TEI).get('url')
+        self.image = "http://shelleygodwinarchive.org"
+        gph = tei.find('.//{%s}graphic' % TEI)
+        if gph is not None:
+            self.image = gph.get('url')
         self.hands_label = ""
 
-        # Only attempt to populate Document-dependent 
+        # Only attempt to populate Document-dependent
         # properties when the document object is available
         if document:
             hands = []
             for hand in document.hands:
                 hands.append(document.hands[hand])
             self.hands_label = ", ".join(hands)
-        
+
             # Determine if this surface is in a range
             if self.xmlid in document.section_loci:
                 title = document.section_loci[self.xmlid]
@@ -170,7 +178,7 @@ class Surface(object):
                 document.ranges[title].add(self.xmlid)
 
         # use a SAX parser to get the line annotations
-        # since we need to keep track of text offsets 
+        # since we need to keep track of text offsets
 
         parser = make_parser()
         handler = LineOffsetHandler(document, self)
@@ -195,6 +203,7 @@ class Zone(object):
         self.lrx = attrs.get('lrx', 0)
         self.lry = attrs.get('lry', 0)
         self.type = None
+        self.rotate = attrs.get('rotate', 0)
         self.begin = 0
         self.end = 0
         self.lines = []
@@ -211,7 +220,7 @@ class Zone(object):
         return "xywh=%s,%s,%s,%s" % (self.ulx, self.uly, width, height)
 
 
-class Line(object):    
+class Line(object):
     def __init__(self):
         self.begin = 0
         self.end = 0
@@ -233,7 +242,7 @@ class Segment(object):
         self.hand_attr = None
         self.in_work = None
 
-class Space(object):    
+class Space(object):
     def __init__(self):
         self.begin = 0
         self.end = 0
@@ -276,7 +285,7 @@ class Highlight(object):
 class LineOffsetHandler(ContentHandler):
     """
     SAX Handler for extracting zones, lines, adds, deletes,
-    and highlights from a TEI canvas. Each canvas is a 
+    and highlights from a TEI canvas. Each canvas is a
     collection of zones. The lines, adds, deletes and highlights
     are added to the zone that they are a part of.
     """
@@ -319,7 +328,7 @@ class LineOffsetHandler(ContentHandler):
             return False
 
         def _add_to_range(xmlid):
-            """ Determine if id is part of a section and if yes add its 
+            """ Determine if id is part of a section and if yes add its
                 surface id to the document's ranges """
             # only proceed if document metadata does exist
             if self.document and self.surface:
@@ -457,13 +466,13 @@ class LineOffsetHandler(ContentHandler):
         if name in ("zone", "line", "add", "del", "hi"):
             e = self.stack.pop()
             e.end = self.pos
-            # pop hand from stack if it was specified as an attribute            
+            # pop hand from stack if it was specified as an attribute
             if name != "zone":
                 hand = e.hand_attr
                 if hand and hand[0]=="#": hand = hand[1:]
                 # make sure to keep default hand at the bottom of the hand stack
                 if len(self.hand_stack) > 1 and hand == self.hand_stack[-1]:
                     self.hand_stack.pop()
-   
+
     def characters(self, content):
         self.pos += len(content) # TODO: does unicode matter here?

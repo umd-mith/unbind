@@ -23,4 +23,4 @@ else:
     m = unbind.shared_canvas.Manifest(args.tei, args.uri)
 
 j = m.jsonld()
-print json.dumps(j, indent=2)
+print(json.dumps(j, indent=2))

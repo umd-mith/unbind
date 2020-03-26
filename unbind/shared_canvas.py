@@ -17,12 +17,12 @@ class Manifest(object):
 
     def __init__(self, tei_filename, manifest_uri, page=None, skip_annos=False):
         """
-        Create a Shared Canvas manifest using the path to a given TEI file 
-        and the URI where the manifest will be published. 
+        Create a Shared Canvas manifest using the path to a given TEI file
+        and the URI where the manifest will be published.
 
         m = Manifest("/path/to/tei.xml", "http://example.com/manifest.jsonld")
-        
-        Optionally pass in a page number if you are debugging and want 
+
+        Optionally pass in a page number if you are debugging and want
         to limit the manifest to a specific page.
 
         Optionally set the skip_annos parameter to true to skip text annotations.
@@ -69,9 +69,9 @@ class Manifest(object):
         # somewhat inefficient since we are serializing the json
         # and then reading it back in, to compact it with jsonld
         # jsonld's compaction actually works properly with the context
-        # unlike rdflib_jsonld's at the moment. Ideally we could 
-        # also use rdflib_jsonld.serlializer.from_rdf to skip 
-        # the serialization, but unofortunately it seems to introduce 
+        # unlike rdflib_jsonld's at the moment. Ideally we could
+        # also use rdflib_jsonld.serlializer.from_rdf to skip
+        # the serialization, but unofortunately it seems to introduce
         # errors into the graph.
         j = self.g.serialize(format='json-ld')
         j = json.loads(j)
@@ -93,8 +93,8 @@ class Manifest(object):
         # a hack until we've got a better way of coordinating the deployment
         # of the xml, html and images
         # html_url = 'http://shelleygodwinarchive.com/tei/readingTEI/html'
-        html_url = 'http://localhost:4000/tei/readingTEI/html'
-        html_url += surface.relative_path.replace('/data/tei/ox', '').replace('/data/tei/bl', '').replace('/data/tei/hu', '')
+        # html_url = 'http://localhost:4000/tei/readingTEI/html'
+        html_url = surface.relative_path.replace('/data/tei/ox', '').replace('/data/tei/bl', '').replace('/data/tei/hu', '')
         html_url = html_url.replace('.xml', '.html')
         return html_url
 
@@ -105,7 +105,8 @@ class Manifest(object):
         self.g.add((self.uri, SC.agentLabel, Literal(self.tei.agent)))
         self.g.add((self.uri, SC.attributionLabel, Literal(self.tei.attribution)))
         self.g.add((self.uri, SC.dateLabel, Literal(self.tei.date)))
-        self.g.add((self.uri, SGA.stateLabel, Literal(self.tei.state)))
+        if hasattr(self.tei, 'state'):
+            self.g.add((self.uri, SGA.stateLabel, Literal(self.tei.state)))
         self.g.add((self.uri, SC.service, URIRef(self.tei.service)))
         self._add_canvases(page, skip_annos)
 
@@ -183,7 +184,7 @@ class Manifest(object):
             g.add((image_uri, DC['format'], Literal('image/jp2')))
             g.add((image_uri, EXIF.height, Literal(surface.height)))
             g.add((image_uri, EXIF.width, Literal(surface.width)))
-            g.add((image_uri, SC.hasRelatedService, URIRef("http://digital.bodleian.ox.ac.uk/fcgi-bin/iipsrv.fcgi?IIIF=/data/images/delivery/jp2s/shelleygodwin/")))
+            g.add((image_uri, SC.hasRelatedService, URIRef("https://iiif.bodleian.ox.ac.uk/iiif/image/")))
 
             # add the image annotation
             image_ann_uri = BNode()
@@ -194,7 +195,7 @@ class Manifest(object):
             next_image_list_uri = BNode()
             g.add((image_list_uri, RDF.rest, next_image_list_uri))
             image_list_uri = next_image_list_uri
- 
+
             # add the canvas to the sequence
             g.add((sequence_uri, RDF.first, canvas_uri))
             next_sequence_uri = BNode()
@@ -256,7 +257,7 @@ class Manifest(object):
                 g.add((annotation, OA.hasBody, body))
                 g.add((body, RDF.type, OA.SpecificResource))
 
-                # construct a URL for the tei xml file assuming that the 
+                # construct a URL for the tei xml file assuming that the
                 # sga data is mounted next to the manifest
                 g.add((body, OA.hasSource, URIRef(self.tei_url(surface))))
 
@@ -275,6 +276,8 @@ class Manifest(object):
                 g.add((target, OA.hasSelector, selector))
                 g.add((selector, RDF.type, OA.FragmentSelector))
                 g.add((selector, RDF.value, Literal(zone.xywh)))
+                if zone.rotate > 0:
+                  g.add((selector, SC.rotation, Literal(zone.rotate)))
 
     def _add_text_annotations(self, surface):
         g = self.g
@@ -329,7 +332,7 @@ class Manifest(object):
                 g.add((annotation, SGA.textAlignment, Literal(a.rend)))
         if ann_type == SGA.SpaceAnnotation:
             g.add((annotation, SGA.spaceExt, Literal(a.ext)))
-   
+
         # link LineAnnotation to SpecificResource and TEI file
         target = BNode()
         g.add((annotation, OA.hasTarget, target))
@@ -353,7 +356,7 @@ class Manifest(object):
         g.add((selector, OAX.end, Literal(a.end)))
 
         # link SpecificResource to CSS as needed
-        if ann_type == SGA.AdditionAnnotation and a.place: 
+        if ann_type == SGA.AdditionAnnotation and a.place:
             if a.place == "superlinear":
                 text = "vertical-align: super;"
             elif a.place == "sublinear":
