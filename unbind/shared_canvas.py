@@ -278,6 +278,8 @@ class Manifest(object):
                 g.add((selector, RDF.value, Literal(zone.xywh)))
                 if zone.rotate > 0:
                   g.add((selector, SC.rotation, Literal(zone.rotate)))
+                if zone.type == "left_margin":
+                  g.add((selector, RDF.type, SC[zone.type]))
 
     def _add_text_annotations(self, surface):
         g = self.g
